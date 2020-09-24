@@ -26,14 +26,14 @@ contract ActionsTest is BaseSystemTest {
 
     function setUp() public {
         bool seniorTranche = false;
-        baseSetup("whitelist", "default", seniorTranche);
+        baseSetup();
         actions = address(new Actions());
         registry = new ProxyRegistry();
         self = address(this);
 
-        admin = new AdminUser(address(shelf), address(pile), address(ceiling), address(title), address(distributor), address(collector), address(threshold));
+        admin = new AdminUser(address(shelf), address(pile), address(nftFeed), address(title), address(reserve), address(collector), address (juniorMemberlist), address (seniorMemberlist));
         admin_ = address(admin);
-        root.relyBorrowAdmin(admin_);
+        root.relyBorrowerAdmin(admin_);
 
         borrowerProxy = Proxy(registry.build());
         borrowerProxy_ = address(borrowerProxy);
@@ -51,7 +51,7 @@ contract ActionsTest is BaseSystemTest {
     // ----- Lender -----
     function invest(uint amount) public {
         currency.mint(lenderProxy_, amount);
-        lenderProxy.execute(actions, abi.encodeWithSignature("approveERC20(address,address,uint256)", address(currency), address(lenderDeployer.junior()), uint(-1)));
+        lenderProxy.execute(actions, abi.encodeWithSignature("approveERC20(address,address,uint256)", address(currency), address(lenderDeployer.juniorTranche()), uint(-1)));
         address operator_ = address(lenderDeployer.juniorOperator());
         OperatorLike(operator_).relyInvestor(lenderProxy_);
         lenderProxy.execute(actions, abi.encodeWithSignature("supply(address,uint256)", operator_, amount));
@@ -76,21 +76,21 @@ contract ActionsTest is BaseSystemTest {
         // Borrower: Issue Loan
         (uint tokenId, ) = issueNFT(borrower_);
         uint loan = issue(tokenId);
+        uint price = 50;
+        uint riskGroup = 2;
 
         // Lender: lend
         uint amount = 100 ether;
         invest(amount);
-        
+
         // Admin: set loan parameters
-        uint speed = 1000000003593629043335673583; uint rate = uint(12); 
-        setLoanParameters(loan, amount, rate, speed);
-    
+        setupLoan(tokenId, address(collateralNFT), price, riskGroup);
+
         // Borrower: Lock & Borrow
         borrowerProxy.execute(actions, abi.encodeWithSignature("lockBorrowWithdraw(address,uint256,uint256,address)", address(shelf), loan, amount, borrower_));
         assertEq(collateralNFT.ownerOf(1), address(shelf));
         // check if borrower received loan amount
         assertEq(currency.balanceOf(borrower_), amount);
-        assertEq(pile.debt(loan), amount);
     }
 
     function testFailIssueLockBorrowerWithdrawCeilingNotSet() public {
@@ -118,8 +118,9 @@ contract ActionsTest is BaseSystemTest {
         invest(amount);
 
         // Admin: set loan parameters
-        uint speed = 1000000003593629043335673583; uint rate = uint(12); 
-        setLoanParameters(loan, amount, rate, speed);
+        uint price = 50;
+        uint riskGroup = 2;
+        setupLoan(tokenId, address(collateralNFT), price, riskGroup);
 
         // RandomUserProxy: Borrow & Withdraw
         randomUserProxy.execute(actions, abi.encodeWithSignature("borrowWithdraw(address,uint256,uint256,address)", address(shelf), loan, amount, randomUserProxy_));
@@ -135,9 +136,10 @@ contract ActionsTest is BaseSystemTest {
         invest(amount);
         
         // Admin: set loan parameters
-        uint speed = 1000000003593629043335673583; uint rate = uint(12); 
-        setLoanParameters(loan, amount, rate, speed);
-    
+        uint price = 50;
+        uint riskGroup = 2;
+        setupLoan(tokenId, address(collateralNFT), price, riskGroup);
+
         // Borrower: Lock & Borrow
         borrowerProxy.execute(actions, abi.encodeWithSignature("lockBorrowWithdraw(address,uint256,uint256,address)", address(shelf), loan, amount, borrower_));
        
@@ -152,7 +154,6 @@ contract ActionsTest is BaseSystemTest {
         borrowerProxy.execute(actions, abi.encodeWithSignature("repayUnlockClose(address,address,address,uint256,address,uint256)", address(shelf), address(pile), address(collateralNFT), tokenId, address(currency), loan));
         // assert: nft transfered back to borrower
         assertEq(collateralNFT.ownerOf(tokenId), address(borrower_));
-        assertEq(pile.debt(loan), 0);
         assertEq(shelf.nftlookup(lookupId), 0);
     }
 
@@ -161,7 +162,7 @@ contract ActionsTest is BaseSystemTest {
         // Lend:
         uint investment = 100 ether;
         currency.mint(lenderProxy_, investment);
-        lenderProxy.execute(actions, abi.encodeWithSignature("approveERC20(address,address,uint256)", address(currency), address(lenderDeployer.junior()), uint(-1)));
+        lenderProxy.execute(actions, abi.encodeWithSignature("approveERC20(address,address,uint256)", address(currency), address(lenderDeployer.juniorTranche()), uint(-1)));
         lenderProxy.execute(actions, abi.encodeWithSignature("supply(address,uint256)", address(juniorOperator), investment));
     }
 }
