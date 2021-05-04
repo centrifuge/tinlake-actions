@@ -51,7 +51,7 @@ contract Actions {
     event Lock(address indexed shelf, uint indexed loan);
     event BorrowWithdraw(address indexed shelf, uint indexed loan, uint amount, address indexed usr);
     event Repay(address indexed shelf, address indexed erc20, uint indexed loan, uint amount);
-    event Unlock(address indexed shelf, address indexed registry, uint indexed token, uint indexed loan);
+    event Unlock(address indexed shelf, address indexed registry, uint token, uint indexed loan);
     event Close(address indexed shelf, uint indexed loan);
 
     // --- Borrower Actions ---
@@ -129,11 +129,6 @@ contract Actions {
 
     function repayUnlockClose(address shelf, address pile, address registry, uint token, address erc20, uint loan) public {
         repayUnlock(shelf, pile, registry, token, erc20, loan);
-        close(shelf, loan);
-    }
-
-    function unlockClose(address shelf, uint loan) public {
-        unlock(shelf, loan);
         close(shelf, loan);
     }
 
