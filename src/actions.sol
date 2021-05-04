@@ -47,7 +47,7 @@ contract Actions {
 
     // --- Events ---
     event Issue(address indexed shelf, address indexed registry, uint indexed token);
-    event TransferIssue(address indexed shelf, address indexed registry, uint indexed token);
+    event Transfer(address indexed registry, uint indexed token);
     event Lock(address indexed shelf, uint indexed loan);
     event BorrowWithdraw(address indexed shelf, uint indexed loan, uint amount, address indexed usr);
     event Repay(address indexed shelf, address indexed erc20, uint indexed loan, uint amount);
