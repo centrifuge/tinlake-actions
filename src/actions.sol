@@ -25,6 +25,7 @@ interface NFTLike {
 
 interface ERC20Like {
     function approve(address usr, uint amount) external;
+    function transfer(address dst, uint amount) external;
     function transferFrom(address src, address dst, uint amount) external;
 }
 
@@ -53,8 +54,8 @@ contract Actions is DSNote {
         ERC20Like(erc20).approve(usr, amount);
     }
 
-    function transferFromERC20(address erc20, address src, address dst, uint amount) public {
-        ERC20Like(erc20).transferFrom(src, dst, amount);
+    function transferERC20(address erc20, address dst, uint amount) public {
+        ERC20Like(erc20).transfer(dst, amount);
     }
 
     // --- Borrower Actions ---
