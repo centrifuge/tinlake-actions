@@ -8,6 +8,3 @@
 	path = lib/tinlake
 	url = https://github.com/centrifuge/tinlake
 	branch = develop
-[submodule "lib/ds-note"]
-	path = lib/ds-note
-	url = https://github.com/centrifuge/ds-note
