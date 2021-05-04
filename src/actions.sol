@@ -102,8 +102,7 @@ contract Actions is DSNote {
     }
 
     function repayFullDebt(address shelf, address pile, address erc20, uint loan) public {
-        uint debt = PileLike(pile).debt(loan);
-        repay(shelf, erc20, loan, debt);
+        repay(shelf, erc20, loan, PileLike(pile).debt(loan));
     }
 
     function unlock(address shelf, address registry, uint token, uint loan) public {
