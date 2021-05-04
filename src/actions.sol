@@ -43,11 +43,6 @@ contract PileLike {
     function debt(uint loan) public returns(uint);
 }
 
-contract OperatorLike {
-    function supply(uint amount) public;
-    function relyInvestor(address usr) public;
-}
-
 contract Actions is DSNote {
     function approveNFT(NFTLike registry, address usr, uint token) public {
         registry.approve(usr, token);
@@ -55,6 +50,10 @@ contract Actions is DSNote {
 
     function approveERC20(ERC20Like erc20, address usr, uint amount) public {
         erc20.approve(usr, amount);
+    }
+
+    function transferFromERC20(ERC20Like erc20, address src, address dst, uint amount) public {
+        erc20.transferFrom(src, dst, amount);
     }
 
     // --- Borrower Actions ---
@@ -125,10 +124,5 @@ contract Actions is DSNote {
     function unlockClose(ShelfLike shelf, uint loan) public {
         shelf.unlock(loan);
         shelf.close(loan);
-    }
-
-    // --- Lender Actions ---
-    function supply(OperatorLike operator, uint amount) public {
-        operator.supply(amount);
     }
 }
