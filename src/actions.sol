@@ -20,12 +20,12 @@ pragma solidity >=0.5.15 <0.6.0;
 
 interface NFTLike {
     function approve(address usr, uint token) external;
-    function transferFrom(address sender, address recipient, uint token) external;
+    function transferFrom(address src, address dst, uint token) external;
 }
 
 interface ERC20Like {
     function approve(address usr, uint amount) external;
-    function transferFrom(address sender, address recipient, uint amount) external;
+    function transferFrom(address src, address dst, uint amount) external;
 }
 
 interface ShelfLike {
@@ -45,88 +45,87 @@ interface PileLike {
 }
 
 contract Actions is DSNote {
-    function approveNFT(NFTLike registry, address usr, uint token) public {
-        registry.approve(usr, token);
+    function approveNFT(address registry, address usr, uint token) public {
+        NFTLike(registry).approve(usr, token);
     }
 
-    function approveERC20(ERC20Like erc20, address usr, uint amount) public {
-        erc20.approve(usr, amount);
+    function approveERC20(address erc20, address usr, uint amount) public {
+        ERC20Like(erc20).approve(usr, amount);
     }
 
-    function transferFromERC20(ERC20Like erc20, address src, address dst, uint amount) public {
-        erc20.transferFrom(src, dst, amount);
+    function transferFromERC20(address erc20, address src, address dst, uint amount) public {
+        ERC20Like(erc20).transferFrom(src, dst, amount);
     }
 
     // --- Borrower Actions ---
 
-    function issue(ShelfLike shelf, NFTLike registry, uint token) note public returns (uint loan) {
-        loan = shelf.issue(address(registry), token);
+    function issue(address shelf, address registry, uint token) note public returns (uint loan) {
+        loan = ShelfLike(shelf).issue(registry, token);
         // proxy approve shelf to take nft
-        registry.approve(address(shelf), token);
+        NFTLike(registry).approve(shelf, token);
         return loan;
     }
 
-    function transferIssue(ShelfLike shelf, NFTLike registry, uint token) note public returns (uint loan) {
+    function transferIssue(address shelf, address registry, uint token) note public returns (uint loan) {
         // transfer nft from borrower to proxy
-        registry.transferFrom(msg.sender, address(this), token);
+        NFTLike(registry).transferFrom(msg.sender, address(this), token);
         return issue(shelf, registry, token);
     }
 
-    function lock(ShelfLike shelf, uint loan) public {
-        shelf.lock(loan);
+    function lock(address shelf, uint loan) public {
+        ShelfLike(shelf).lock(loan);
     }
 
-    function borrowWithdraw(ShelfLike shelf, uint loan, uint amount, address usr) public {
-        shelf.borrow(loan, amount);
-        shelf.withdraw(loan, amount, usr);
+    function borrowWithdraw(address shelf, uint loan, uint amount, address usr) public {
+        ShelfLike(shelf).borrow(loan, amount);
+        ShelfLike(shelf).withdraw(loan, amount, usr);
     }
 
-    function lockBorrowWithdraw(ShelfLike shelf, uint loan, uint amount, address usr) public {
-        shelf.lock(loan);
+    function lockBorrowWithdraw(address shelf, uint loan, uint amount, address usr) public {
+        ShelfLike(shelf).lock(loan);
         borrowWithdraw(shelf, loan, amount, usr);
     }
 
-    function transferIssueLockBorrowWithdraw(ShelfLike shelf, NFTLike registry, uint token, uint amount, address usr) public {
+    function transferIssueLockBorrowWithdraw(address shelf, address registry, uint token, uint amount, address usr) public {
         uint loan = transferIssue(shelf, registry, token);
         lockBorrowWithdraw(shelf, loan, amount, usr);
     }
 
-    function repay(ShelfLike shelf, ERC20Like erc20, uint loan, uint amount) public {
-        uint debt = PileLike(shelf.pile()).debt(loan);
-        require(amount <= debt, "amount-larger-than-debt");
+    function repay(address shelf, address erc20, uint loan, uint amount) public {
+        require(amount <= PileLike(ShelfLike(shelf).pile()).debt(loan), "amount-larger-than-debt");
 
         // transfer money from borrower to proxy
-        erc20.transferFrom(msg.sender, address(this), amount);
-        erc20.approve(address(shelf), amount);
-        shelf.repay(loan, amount);
+        ERC20Like(erc20).transferFrom(msg.sender, address(this), amount);
+        ERC20Like(erc20).approve(address(shelf), amount);
+        ShelfLike(shelf).repay(loan, amount);
     }
 
-    function repayFullDebt(ShelfLike shelf, PileLike pile, ERC20Like erc20, uint loan) public {
-        uint debt = pile.debt(loan);
+    function repayFullDebt(address shelf, address pile, address erc20, uint loan) public {
+        uint debt = PileLike(pile).debt(loan);
         repay(shelf, erc20, loan, debt);
     }
 
-    function unlock(ShelfLike shelf, NFTLike registry, uint token, uint loan) public {
-        shelf.unlock(loan);
-        registry.transferFrom(address(this), msg.sender, token);
+    function unlock(address shelf, address registry, uint token, uint loan) public {
+        ShelfLike(shelf).unlock(loan);
+        NFTLike(registry).transferFrom(address(this), msg.sender, token);
     }
 
-    function close(ShelfLike shelf, uint loan) public {
-        shelf.close(loan);
+    function close(address shelf, uint loan) public {
+        ShelfLike(shelf).close(loan);
     }
 
-    function repayUnlock(ShelfLike shelf, PileLike pile, NFTLike registry, uint token, ERC20Like erc20, uint loan) public {
+    function repayUnlock(address shelf, address pile, address registry, uint token, address erc20, uint loan) public {
         repayFullDebt(shelf, pile, erc20, loan);
         unlock(shelf, registry, token, loan);
     }
 
-    function repayUnlockClose(ShelfLike shelf, PileLike pile, NFTLike registry, uint token, ERC20Like erc20, uint loan) public {
+    function repayUnlockClose(address shelf, address pile, address registry, uint token, address erc20, uint loan) public {
         repayUnlock(shelf, pile, registry, token, erc20, loan);
-        shelf.close(loan);
+        ShelfLike(shelf).close(loan);
     }
 
-    function unlockClose(ShelfLike shelf, uint loan) public {
-        shelf.unlock(loan);
-        shelf.close(loan);
+    function unlockClose(address shelf, uint loan) public {
+        ShelfLike(shelf).unlock(loan);
+        ShelfLike(shelf).close(loan);
     }
 }
