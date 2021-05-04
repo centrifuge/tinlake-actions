@@ -1,4 +1,4 @@
-pragma solidity ^0.5.3;
+pragma solidity >=0.5.15 <0.6.0;
 pragma experimental ABIEncoderV2;
 
 import { Proxy, ProxyRegistry } from "tinlake-proxy/proxy.sol";
@@ -6,8 +6,8 @@ import { BaseSystemTest } from "tinlake/test/system/base_system.sol";
 import { AdminUser } from "tinlake/test/system/users/admin.sol";
 import "./actions.sol";
 
-contract Hevm {
-    function warp(uint256) public;
+interface Hevm {
+    function warp(uint256) external;
 }
 
 contract ActionsTest is BaseSystemTest {
@@ -154,5 +154,31 @@ contract ActionsTest is BaseSystemTest {
        // assert: nft transfered back to borrower
        assertEq(collateralNFT.ownerOf(tokenId), address(borrower_));
        assertEq(shelf.nftlookup(lookupId), 0);
+   }
+
+   function testFailRepayMoreThanDebt() public {
+       // Borrower: Issue Loan
+       (uint tokenId, bytes32 lookupId) = issueNFT(borrower_);
+       uint loan = issue(tokenId);
+
+       // Lender: lend
+       defaultInvest(100 ether);
+       hevm.warp(block.timestamp + 1 days);
+       coordinator.closeEpoch();
+
+       // Admin: set loan parameters
+       uint price = 50;
+       uint riskGroup = 2;
+       uint amount = 25;
+       priceNFTandSetRisk(tokenId, price, riskGroup);
+
+       // Borrower: Lock & Borrow
+       borrowerProxy.execute(actions, abi.encodeWithSignature("lockBorrowWithdraw(address,uint256,uint256,address)", address(shelf), loan, amount, borrower_));
+
+       // mint currency for borrower
+       currency.mint(borrower_, 50 ether);
+       currency.approve(borrowerProxy_, 50 ether);
+       // Borrower: Repay & Unlock & Close
+       borrowerProxy.execute(actions, abi.encodeWithSignature("repay(address,address,uint256,uint256)", address(shelf), address(currency), loan, 50 ether));
    }
 }

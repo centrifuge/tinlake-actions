@@ -16,31 +16,32 @@
 
 import "ds-note/note.sol";
 
-pragma solidity ^0.5.3;
+pragma solidity >=0.5.15 <0.6.0;
 
-contract NFTLike {
-    function approve(address usr, uint token) public;
-    function transferFrom(address sender, address recipient, uint token) public;
+interface NFTLike {
+    function approve(address usr, uint token) external;
+    function transferFrom(address sender, address recipient, uint token) external;
 }
 
-contract ERC20Like {
-    function approve(address usr, uint amount) public;
-    function transferFrom(address sender, address recipient, uint amount) public;
+interface ERC20Like {
+    function approve(address usr, uint amount) external;
+    function transferFrom(address sender, address recipient, uint amount) external;
 }
 
-contract ShelfLike {
-    function lock(uint loan) public;
-    function unlock(uint loan) public;
-    function issue(address registry, uint token) public returns(uint loan);
-    function close(uint loan) public;
-    function borrow(uint loan, uint amount) public;
-    function withdraw(uint loan, uint amount, address usr) public;
-    function repay(uint loan, uint amount) public;
-    function shelf(uint loan) public returns(address registry,uint256 tokenId,uint price,uint principal, uint initial);
+interface ShelfLike {
+    function pile() external returns(address);
+    function lock(uint loan) external;
+    function unlock(uint loan) external;
+    function issue(address registry, uint token) external returns(uint loan);
+    function close(uint loan) external;
+    function borrow(uint loan, uint amount) external;
+    function withdraw(uint loan, uint amount, address usr) external;
+    function repay(uint loan, uint amount) external;
+    function shelf(uint loan) external returns(address registry,uint256 tokenId,uint price,uint principal, uint initial);
 }
 
-contract PileLike {
-    function debt(uint loan) public returns(uint);
+interface PileLike {
+    function debt(uint loan) external returns(uint);
 }
 
 contract Actions is DSNote {
@@ -91,6 +92,9 @@ contract Actions is DSNote {
     }
 
     function repay(ShelfLike shelf, ERC20Like erc20, uint loan, uint amount) public {
+        uint debt = PileLike(shelf.pile()).debt(loan);
+        require(amount <= debt, "amount-larger-than-debt");
+
         // transfer money from borrower to proxy
         erc20.transferFrom(msg.sender, address(this), amount);
         erc20.approve(address(shelf), amount);
