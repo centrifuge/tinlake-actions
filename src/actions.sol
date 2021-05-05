@@ -123,7 +123,8 @@ contract Actions {
     }
 
     function repayUnlockClose(address shelf, address pile, address registry, uint token, address erc20, uint loan) public {
-        repayUnlock(shelf, pile, registry, token, erc20, loan);
+        repayFullDebt(shelf, pile, erc20, loan);
+        unlock(shelf, registry, token, loan);
         close(shelf, loan);
     }
 
