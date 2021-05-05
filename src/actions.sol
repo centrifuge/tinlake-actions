@@ -85,8 +85,20 @@ contract Actions {
     }
 
     function repay(address shelf, address erc20, uint loan, uint amount) public {
-        require(amount <= PileLike(ShelfLike(shelf).pile()).debt(loan), "amount-larger-than-debt");
+        // don't allow repaying more than the debt as currency would get stuck in the proxy
+        uint debt = PileLike(ShelfLike(shelf).pile()).debt(loan);
+        if (amount > debt) {
+            amount = debt;
+        }
 
+        _repay(shelf, erc20, loan, amount);
+    }
+
+    function repayFullDebt(address shelf, address pile, address erc20, uint loan) public {
+        _repay(shelf, erc20, loan, PileLike(pile).debt(loan));
+    }
+
+    function _repay(address shelf, address erc20, uint loan, uint amount) internal {
         // transfer money from borrower to proxy
         ERC20Like(erc20).transferFrom(msg.sender, address(this), amount);
         ERC20Like(erc20).approve(address(shelf), amount);
@@ -119,10 +131,6 @@ contract Actions {
     function transferIssueLockBorrowWithdraw(address shelf, address registry, uint token, uint amount, address usr) public {
         uint loan = transferIssue(shelf, registry, token);
         lockBorrowWithdraw(shelf, loan, amount, usr);
-    }
-
-    function repayFullDebt(address shelf, address pile, address erc20, uint loan) public {
-        repay(shelf, erc20, loan, PileLike(pile).debt(loan));
     }
 
     function repayUnlockClose(address shelf, address pile, address registry, uint token, address erc20, uint loan) public {
