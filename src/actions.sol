@@ -53,6 +53,9 @@ contract Actions {
     event Repay(address indexed shelf, address indexed erc20, uint indexed loan, uint amount);
     event Unlock(address indexed shelf, address indexed registry, uint token, uint indexed loan);
     event Close(address indexed shelf, uint indexed loan);
+    event ApproveNFT(address indexed registry, address indexed usr, uint tokenAmount);
+    event ApproveERC20(address indexed erc20, address indexed usr, uint amount);
+    event TransferERC20(address indexed erc20, address indexed dst, uint amount);
 
     // --- Borrower Actions ---
     function issue(address shelf, address registry, uint token) public returns (uint loan) {
@@ -129,16 +132,19 @@ contract Actions {
     }
 
     // --- Misc Functions ---
-    function approveNFT(address registry, address usr, uint token) public {
-        NFTLike(registry).approve(usr, token);
+    function approveNFT(address registry, address usr, uint tokenAmount) public {
+        NFTLike(registry).approve(usr, tokenAmount);
+        emit ApproveNFT(registry, usr, tokenAmount);
     }
 
     function approveERC20(address erc20, address usr, uint amount) public {
         ERC20Like(erc20).approve(usr, amount);
+        emit ApproveERC20(erc20, usr, amount);
     }
 
     function transferERC20(address erc20, address dst, uint amount) public {
         ERC20Like(erc20).transfer(dst, amount);
+        emit TransferERC20(erc20, dst, amount);
     }
 
 }
