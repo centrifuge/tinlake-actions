@@ -41,7 +41,7 @@ contract ActionsTest is BasisPoolTest {
         borrower_ = address(this);
 
         // get proxy
-        actions = address(new Actions(rootContract));
+        actions = address(new Actions(rootContract, borrower_));
         registry = new ProxyRegistry();
 
         borrowerProxy = Proxy(registry.build());
@@ -49,8 +49,8 @@ contract ActionsTest is BasisPoolTest {
         borrowerProxy.file("target", address(actions));
 
         randomUserProxy = Proxy(registry.build());
-        randomUserProxy.addUser(address(0x123));
-        randomUserProxy.file("target", address(actions));
+        randomUserProxy.addUser(randomUserProxy_);
+        randomUserProxy.file("target", address(new Actions(rootContract, randomUserProxy_)));
 
         borrowerProxy_ = address(borrowerProxy);
     }
@@ -131,7 +131,7 @@ contract ActionsTest is BasisPoolTest {
         borrowerProxy.userExecute(
             actions,
             abi.encodeWithSignature(
-                "lockBorrowWithdraw(uint256,uint256,address)", loan, amount, borrower_
+                "lockBorrowWithdraw(uint256,uint256)", loan, amount
             )
         );
         assertEq(collateralNFT.ownerOf(tokenId), address(shelf));
@@ -145,7 +145,7 @@ contract ActionsTest is BasisPoolTest {
         borrowerProxy.userExecute(
             actions,
             abi.encodeWithSignature(
-                "issueLockBorrowWithdraw(address,uint256,uint256,address)",
+                "issueLockBorrowWithdraw(address,uint256,uint256)",
                 address(collateralNFT),
                 tokenId,
                 amount,
@@ -185,7 +185,7 @@ contract ActionsTest is BasisPoolTest {
         randomUserProxy.userExecute(
             actions,
             abi.encodeWithSignature(
-                "borrowWithdraw(uint256,uint256,address)", loan, amount, randomUserProxy_
+                "borrowWithdraw(uint256,uint256)", loan, amount
             )
         );
     }
@@ -210,7 +210,7 @@ contract ActionsTest is BasisPoolTest {
         borrowerProxy.userExecute(
             actions,
             abi.encodeWithSignature(
-                "lockBorrowWithdraw(uint256,uint256,address)", loan, amount, borrower_
+                "lockBorrowWithdraw(uint256,uint256)", loan, amount
             )
         );
 
