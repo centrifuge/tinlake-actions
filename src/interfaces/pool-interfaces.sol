@@ -76,3 +76,7 @@ interface ShelfLike {
         external
         returns (address registry, uint256 tokenId, uint256 price, uint256 principal, uint256 initial);
 }
+
+interface PileLike {
+    function debt(uint256 loan) external returns (uint256);
+}

@@ -3,22 +3,9 @@ pragma experimental ABIEncoderV2;
 
 import {Proxy, ProxyRegistry} from "tinlake-proxy/proxy.sol";
 import {ERC721} from "openzeppelin-contracts/token/ERC721/ERC721.sol";
-import {Actions, PileLike} from "./actions.sol";
-import {
-    RootLike,
-    BorrowerDeployerLike,
-    LenderDeployerLike,
-    ERC721Like,
-    FeedLike,
-    OperatorLike,
-    MemberlistLike,
-    ERC20Like,
-    CoordinatorLike,
-    DependLike,
-    ShelfLike
-} from "./interfaces/pool-interfaces.sol";
-import {Test} from "forge-std/Test.sol";
-import {DSTest} from "ds-test/test.sol";
+import {Actions} from "./actions.sol";
+import {BasisPoolTest, OperatorLike, MemberlistLike} from "./basic-pool-test.sol";
+
 
 contract Collateral is ERC721("Collateral", "COL") {
     uint256 public nextTokenId;
@@ -31,82 +18,20 @@ contract Collateral is ERC721("Collateral", "COL") {
     }
 }
 
-contract ActionsTest is Test {
+contract ActionsTest is BasisPoolTest {
     address public actions;
     Proxy public borrowerProxy;
     Proxy public randomUserProxy;
     address public borrowerProxy_;
     ProxyRegistry public registry;
-
     Collateral public collateralNFT;
 
-    uint256 public constant ONE = 10 ** 27;
-
-    // Pool Interfaces
-
-    // BT Pool on Mainnet for testing
-    address public rootContract = 0x4597f91cC06687Bdb74147C80C097A79358Ed29b;
-
-    // DAI
-    ERC20Like public currency;
-    PileLike public pile;
-    ShelfLike public shelf;
-    FeedLike public feed;
-    CoordinatorLike public coordinator;
-
-    ERC721Like public title;
-    LenderDeployerLike public lenderDeployer;
-    BorrowerDeployerLike public borrowerDeployer;
     address randomUserProxy_ = address(0x123);
-
     address internal borrower_;
 
-    function _checkRoot() internal {
-        uint32 size;
-        address _addr = rootContract;
-        assembly {
-            size := extcodesize(_addr)
-        }
-        require(size > 0, "test-suite: no contract found on testnet/mainnet");
-    }
-
-    function _setUpPoolInterfaces() internal {
-        _checkRoot();
-        RootLike root = RootLike(rootContract);
-        borrowerDeployer = BorrowerDeployerLike(root.borrowerDeployer());
-        lenderDeployer = LenderDeployerLike(root.lenderDeployer());
-
-        currency = ERC20Like(borrowerDeployer.currency());
-
-        // get super powers on DAI contract
-        vm.store(address(currency), keccak256(abi.encode(address(this), uint256(0))), bytes32(uint256(1)));
-
-        pile = PileLike(borrowerDeployer.pile());
-        shelf = ShelfLike(borrowerDeployer.shelf());
-        title = ERC721Like(borrowerDeployer.title());
-        feed = FeedLike(borrowerDeployer.feed());
-        coordinator = CoordinatorLike(lenderDeployer.coordinator());
-
-        // deactivate Maker
-        vm.startPrank(address(rootContract));
-        DependLike(lenderDeployer.assessor()).depend("lending", address(0));
-        DependLike(lenderDeployer.reserve()).depend("lending", address(0));
-        vm.stopPrank();
-    }
-
-    function _fileRiskGroup() internal {
-        vm.startPrank(address(rootContract));
-        feed.file(
-            "riskGroup",
-            0, // riskGroup:       0
-            8 * 10 ** 26, // thresholdRatio   70%
-            6 * 10 ** 26, // ceilingRatio     60%
-            uint256(1000000564701133626865910626) // interestRate     5% per year
-        );
-        vm.stopPrank();
-    }
-
     function setUp() public {
+        // default BT 1 mainnet pool
+        rootContract = 0x4597f91cC06687Bdb74147C80C097A79358Ed29b;
         // get pool addresses from root contract
         _setUpPoolInterfaces();
         _fileRiskGroup();

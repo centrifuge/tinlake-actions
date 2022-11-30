@@ -7,6 +7,7 @@ fuzz-runs = 100
 optimizer = true          # Enable or disable the solc optimizer
 optimizer_runs = 200      # The number of optimizer runs
 verbosity = 3             # The verbosity of tests
+eth-rpc-url = 'https://mainnet.infura.io/v3/a4ba76cd4be643618572e7467a444e3a'
 
 [profile.pull_request]
 fuzz_runs = 1000
