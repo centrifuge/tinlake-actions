@@ -41,7 +41,7 @@ contract ActionsTest is BasisPoolTest {
         borrower_ = address(this);
 
         // get proxy
-        actions = address(new Actions());
+        actions = address(new Actions(rootContract));
         registry = new ProxyRegistry();
 
         borrowerProxy = Proxy(registry.build());
@@ -68,7 +68,7 @@ contract ActionsTest is BasisPoolTest {
         nftID = keccak256(abi.encodePacked(address(collateralNFT), tokenId));
     }
 
-    function testBasic() public {
+    function testBasic() public view {
         _checkRoot();
     }
 
@@ -100,7 +100,7 @@ contract ActionsTest is BasisPoolTest {
         // approve nft transfer to proxy
         collateralNFT.approve(borrowerProxy_, tokenId);
         bytes memory data = abi.encodeWithSignature(
-            "transferIssue(address,address,uint256)", address(shelf), address(collateralNFT), tokenId
+            "transferIssue(address,uint256)", address(collateralNFT), tokenId
         );
         bytes memory response = borrowerProxy.userExecute(actions, data);
         (uint256 loan) = abi.decode(response, (uint256));
@@ -131,7 +131,7 @@ contract ActionsTest is BasisPoolTest {
         borrowerProxy.userExecute(
             actions,
             abi.encodeWithSignature(
-                "lockBorrowWithdraw(address,uint256,uint256,address)", address(shelf), loan, amount, borrower_
+                "lockBorrowWithdraw(uint256,uint256,address)", loan, amount, borrower_
             )
         );
         assertEq(collateralNFT.ownerOf(tokenId), address(shelf));
@@ -145,8 +145,7 @@ contract ActionsTest is BasisPoolTest {
         borrowerProxy.userExecute(
             actions,
             abi.encodeWithSignature(
-                "issueLockBorrowWithdraw(address,address,uint256,uint256,address)",
-                address(shelf),
+                "issueLockBorrowWithdraw(address,uint256,uint256,address)",
                 address(collateralNFT),
                 tokenId,
                 amount,
@@ -158,7 +157,7 @@ contract ActionsTest is BasisPoolTest {
     function testFailIssueBorrowerNotOwner() public {
         (uint256 tokenId,) = _issueNFT(randomUserProxy_);
         bytes memory data =
-            abi.encodeWithSignature("issue(address,address,uint256)", address(shelf), address(collateralNFT), tokenId);
+            abi.encodeWithSignature("issue(address,address,uint256)", address(collateralNFT), tokenId);
         // randomProxy not owner of nft
         borrowerProxy.userExecute(actions, data);
     }
@@ -166,10 +165,10 @@ contract ActionsTest is BasisPoolTest {
     function testFailBorrowNotLoanOwner() public {
         (uint256 tokenId,) = _issueNFT(borrower_);
         bytes memory data =
-            abi.encodeWithSignature("issue(address,address,uint256)", address(shelf), address(collateralNFT), tokenId);
+            abi.encodeWithSignature("issue(address,uint256)",address(collateralNFT), tokenId);
         bytes memory response = borrowerProxy.userExecute(actions, data);
         (uint256 loan) = abi.decode(response, (uint256));
-        borrowerProxy.userExecute(actions, abi.encodeWithSignature("lock(address,uint256)", address(shelf), loan));
+        borrowerProxy.userExecute(actions, abi.encodeWithSignature("lock(uint256)", loan));
 
         // Lend:
         uint256 amount = 100 ether;
@@ -179,14 +178,14 @@ contract ActionsTest is BasisPoolTest {
         uint256 price = 50;
         uint256 riskGroup = 0;
 
-        // price collateral and add to riskgroup
+        // price collateral and add to riskgroupaddress
         priceNFTandSetRisk(tokenId, price, riskGroup);
 
         // RandomUserProxy: Borrow & Withdraw
         randomUserProxy.userExecute(
             actions,
             abi.encodeWithSignature(
-                "borrowWithdraw(address,uint256,uint256,address)", address(shelf), loan, amount, randomUserProxy_
+                "borrowWithdraw(uint256,uint256,address)", loan, amount, randomUserProxy_
             )
         );
     }
@@ -211,7 +210,7 @@ contract ActionsTest is BasisPoolTest {
         borrowerProxy.userExecute(
             actions,
             abi.encodeWithSignature(
-                "lockBorrowWithdraw(address,uint256,uint256,address)", address(shelf), loan, amount, borrower_
+                "lockBorrowWithdraw(uint256,uint256,address)", loan, amount, borrower_
             )
         );
 
@@ -226,9 +225,7 @@ contract ActionsTest is BasisPoolTest {
         borrowerProxy.userExecute(
             actions,
             abi.encodeWithSignature(
-                "repayUnlockClose(address,address,address,uint256,address,uint256)",
-                address(shelf),
-                address(pile),
+                "repayUnlockClose(address,uint256,address,uint256)",
                 address(collateralNFT),
                 tokenId,
                 address(currency),
