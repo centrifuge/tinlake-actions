@@ -66,13 +66,12 @@ contract Actions {
     event ApproveERC20(address indexed erc20, address indexed usr, uint256 amount);
     event TransferERC20(address indexed erc20, address indexed dst, uint256 amount);
 
-    address immutable public shelf;
-    address immutable public pile;
-    address immutable public self;
+    address public immutable shelf;
+    address public immutable pile;
+    address public immutable self;
 
     // address to deposit withdraws
-    address immutable public withdrawAddress;
-
+    address public immutable withdrawAddress;
 
     // modifier only delegated call
     modifier onlyDelegateCall() {
@@ -80,7 +79,7 @@ contract Actions {
         _;
     }
 
-    constructor (address root_, address withdrawAddress_) {
+    constructor(address root_, address withdrawAddress_) {
         shelf = BorrowerDeployerLike(RootLike(root_).borrowerDeployer()).shelf();
         pile = ShelfLike(shelf).pile();
         self = address(this);
@@ -88,7 +87,7 @@ contract Actions {
     }
 
     // --- Borrower Actions ---
-    function issue(address registry, uint256 token) public onlyDelegateCall returns (uint256 loan)  {
+    function issue(address registry, uint256 token) public onlyDelegateCall returns (uint256 loan) {
         loan = ShelfLike(shelf).issue(registry, token);
         // proxy approve shelf to take nft
         NFTLike(registry).approve(shelf, token);
@@ -158,18 +157,12 @@ contract Actions {
         borrowWithdraw(loan, amount);
     }
 
-    function transferIssueLockBorrowWithdraw(
-        address registry,
-        uint256 token,
-        uint256 amount
-    ) public onlyDelegateCall {
+    function transferIssueLockBorrowWithdraw(address registry, uint256 token, uint256 amount) public onlyDelegateCall {
         uint256 loan = transferIssue(registry, token);
         lockBorrowWithdraw(loan, amount);
     }
 
-    function repayUnlockClose(address registry, uint256 token, address erc20, uint256 loan)
-        public
-    {
+    function repayUnlockClose(address registry, uint256 token, address erc20, uint256 loan) public {
         repayFullDebt(erc20, loan);
         unlock(registry, token, loan);
         close(loan);
