@@ -75,7 +75,7 @@ contract Actions {
 
     // modifier only delegated call
     modifier onlyDelegateCall() {
-        require(address(this) != self, "only-delegated");
+        require(address(this) != self, "only-delegate-call");
         _;
     }
 
@@ -83,6 +83,7 @@ contract Actions {
         shelf = BorrowerDeployerLike(RootLike(root_).borrowerDeployer()).shelf();
         pile = ShelfLike(shelf).pile();
         self = address(this);
+        require(withdrawAddress_ != address(0), "withdraw-address-not-set");
         withdrawAddress = withdrawAddress_;
     }
 

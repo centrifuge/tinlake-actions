@@ -109,7 +109,7 @@ contract ActionsTest is BasisPoolTest {
         return loan;
     }
 
-    function testIssueLockBorrow() public {
+    function _issueLockBorrow(Actions actions) internal {
         // Borrower: Issue Loan
         (uint256 tokenId,) = _issueNFT(borrower_);
         uint256 loan = issue(tokenId);
@@ -127,11 +127,19 @@ contract ActionsTest is BasisPoolTest {
 
         // Borrower: Lock & Borrow
         borrowerProxy.userExecute(
-            address(bActions), abi.encodeWithSignature("lockBorrowWithdraw(uint256,uint256)", loan, amount)
+            address(actions), abi.encodeWithSignature("lockBorrowWithdraw(uint256,uint256)", loan, amount)
         );
         assertEq(collateralNFT.ownerOf(tokenId), address(shelf));
         // check if borrower received loan amount
         assertEq(currency.balanceOf(borrower_), amount);
+    }
+
+    function testIssueLockBorrow() public {
+        _issueLockBorrow(bActions);
+    }
+
+    function testFailWrongActionContract() public {
+        _issueLockBorrow(randomUserActions);
     }
 
     function testFailIssueLockBorrowerWithdrawCeilingNotSet() public {
