@@ -3,12 +3,21 @@ pragma experimental ABIEncoderV2;
 
 import {Proxy, ProxyRegistry} from "tinlake-proxy/proxy.sol";
 import {ERC721} from "openzeppelin-contracts/token/ERC721/ERC721.sol";
-import {Actions, PileLike, ShelfLike, ERC20Like } from "./actions.sol";
-import {RootLike, BorrowerDeployerLike, ERC721Like} from "./interfaces/pool-interfaces.sol";
+import {Actions, PileLike, ShelfLike} from "./actions.sol";
+import {
+    RootLike,
+    BorrowerDeployerLike,
+    LenderDeployerLike,
+    ERC721Like,
+    FeedLike,
+    OperatorLike,
+    MemberlistLike,
+    ERC20Like,
+    CoordinatorLike,
+    DependLike
+} from "./interfaces/pool-interfaces.sol";
 import {Test} from "forge-std/Test.sol";
 import {DSTest} from "ds-test/test.sol";
-
-import "./actions.sol";
 
 contract Collateral is ERC721("Collateral", "COL") {
     uint256 public nextTokenId;
@@ -29,6 +38,8 @@ contract ActionsTest is Test {
 
     Collateral public collateralNFT;
 
+    uint256 public constant ONE = 10 ** 27;
+
     // Pool Interfaces
 
     // BT Pool on Mainnet for testing
@@ -38,8 +49,12 @@ contract ActionsTest is Test {
     ERC20Like public currency;
     PileLike public pile;
     ShelfLike public shelf;
+    FeedLike public feed;
+    CoordinatorLike public coordinator;
 
     ERC721Like public title;
+    LenderDeployerLike public lenderDeployer;
+    BorrowerDeployerLike public borrowerDeployer;
 
     address internal borrower_;
 
@@ -55,7 +70,8 @@ contract ActionsTest is Test {
     function _setUpPoolInterfaces() internal {
         _checkRoot();
         RootLike root = RootLike(rootContract);
-        BorrowerDeployerLike borrowerDeployer = BorrowerDeployerLike(root.borrowerDeployer());
+        borrowerDeployer = BorrowerDeployerLike(root.borrowerDeployer());
+        lenderDeployer = LenderDeployerLike(root.lenderDeployer());
 
         currency = ERC20Like(borrowerDeployer.currency());
 
@@ -65,13 +81,41 @@ contract ActionsTest is Test {
         pile = PileLike(borrowerDeployer.pile());
         shelf = ShelfLike(borrowerDeployer.shelf());
         title = ERC721Like(borrowerDeployer.title());
+        feed = FeedLike(borrowerDeployer.feed());
+        coordinator = CoordinatorLike(lenderDeployer.coordinator());
+
+        // deactivate Maker
+            vm.startPrank(address(rootContract));
+           DependLike(lenderDeployer.assessor()).depend("lending", address(0));
+            DependLike(lenderDeployer.reserve()).depend("lending", address(0));
+              vm.stopPrank();
+    }
+
+    function _fileRiskGroup() internal {
+        vm.startPrank(address(rootContract));
+        feed.file(
+            "riskGroup",
+            0, // riskGroup:       0
+            8 * 10 ** 26, // thresholdRatio   70%
+            6 * 10 ** 26, // ceilingRatio     60%
+            uint256(1000000564701133626865910626) // interestRate     5% per year
+        );
+        vm.stopPrank();
+    }
+
+    function priceNFTandSetRisk(uint256 tokenId, uint256 value, uint256 riskGroup) public {
+        bytes32 lookupId = keccak256(abi.encodePacked(address(collateralNFT), tokenId));
+
+        vm.startPrank(address(rootContract));
+        feed.update(lookupId, value, riskGroup);
+        vm.stopPrank();
     }
 
     function setUp() public {
         // get pool addresses from root contract
         _setUpPoolInterfaces();
+        _fileRiskGroup();
         collateralNFT = new Collateral();
-
 
         // test contract is borrower
         borrower_ = address(this);
@@ -86,7 +130,6 @@ contract ActionsTest is Test {
         borrowerProxy.file("target", address(actions));
 
         borrowerProxy_ = address(borrowerProxy);
-
     }
 
     function _issueNFT(address usr) public returns (uint256 tokenId, bytes32 nftID) {
@@ -94,7 +137,31 @@ contract ActionsTest is Test {
         nftID = keccak256(abi.encodePacked(address(collateralNFT), tokenId));
     }
 
-    function testBasic() public {}
+    function testBasic() public {
+        _checkRoot();
+    }
+
+    function defaultInvest(uint256 currencyAmount) public {
+        vm.startPrank(address(rootContract));
+        uint256 validUntil = block.timestamp + 8 days;
+
+        MemberlistLike(lenderDeployer.seniorMemberlist()).updateMember(borrower_, validUntil);
+        MemberlistLike(lenderDeployer.juniorMemberlist()).updateMember(borrower_, validUntil);
+        vm.stopPrank();
+
+        // 80% from senior
+        uint256 amountSenior = (currencyAmount * (ONE * 7) / 10) / ONE;
+        // 20% from junior
+        uint256 amountJunior = (currencyAmount * (ONE * 3) / 10) / ONE;
+
+        currency.mint(borrower_, amountSenior + amountJunior);
+
+        // approve currency transfer
+        currency.approve(lenderDeployer.seniorTranche(), amountSenior);
+        currency.approve(lenderDeployer.juniorTranche(), amountJunior);
+        OperatorLike(lenderDeployer.seniorOperator()).supplyOrder(amountSenior);
+        OperatorLike(lenderDeployer.juniorOperator()).supplyOrder(amountJunior);
+    }
 
     // ----- Borrower -----
     function issue(uint256 tokenId) public returns (uint256) {
@@ -117,23 +184,28 @@ contract ActionsTest is Test {
         // Borrower: Issue Loan
         (uint256 tokenId,) = _issueNFT(borrower_);
         uint256 loan = issue(tokenId);
-        //    uint price = 50;
-        //    uint amount = 25;
-        //    uint riskGroup = 2;
+        uint256 price = 50;
+        uint256 amount = 25;
+        uint256 riskGroup = 0;
 
-        //    // Lender: lend
-        //    defaultInvest(100 ether);
-        //    hevm.warp(block.timestamp + 1 days);
-        //    coordinator.closeEpoch();
+        // Lender: lend
+        defaultInvest(100 ether);
+        vm.warp(block.timestamp + 1 days);
+        coordinator.closeEpoch();
 
-        //    // Admin: set loan parameters
-        //    priceNFTandSetRisk(tokenId, price, riskGroup);
+        // Admin: set loan parameters
+        priceNFTandSetRisk(tokenId, price, riskGroup);
 
-        //    // Borrower: Lock & Borrow
-        //    borrowerProxy.execute(actions, abi.encodeWithSignature("lockBorrowWithdraw(address,uint256,uint256,address)", address(shelf), loan, amount, borrower_));
-        //    assertEq(collateralNFT.ownerOf(1), address(shelf));
-        //    // check if borrower received loan amount
-        //    assertEq(currency.balanceOf(borrower_), amount);
+        // Borrower: Lock & Borrow
+        borrowerProxy.userExecute(
+            actions,
+            abi.encodeWithSignature(
+                "lockBorrowWithdraw(address,uint256,uint256,address)", address(shelf), loan, amount, borrower_
+            )
+        );
+        assertEq(collateralNFT.ownerOf(tokenId), address(shelf));
+        // check if borrower received loan amount
+        assertEq(currency.balanceOf(borrower_), amount);
     }
 
     //     function testFailIssueLockBorrowerWithdrawCeilingNotSet() public {
