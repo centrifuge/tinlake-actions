@@ -84,6 +84,8 @@ contract Actions {
         pile = ShelfLike(shelf).pile();
         self = address(this);
         require(withdrawAddress_ != address(0), "withdraw-address-not-set");
+        require(shelf != address(0), "shelf-not-set");
+        require(pile != address(0), "pile-not-set");
         withdrawAddress = withdrawAddress_;
     }
 
