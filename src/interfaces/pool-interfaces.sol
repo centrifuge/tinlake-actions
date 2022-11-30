@@ -61,3 +61,18 @@ interface CoordinatorLike {
 interface DependLike {
     function depend(bytes32 name, address addr) external;
 }
+
+interface ShelfLike {
+    function pile() external returns (address);
+    function lock(uint256 loan) external;
+    function unlock(uint256 loan) external;
+    function issue(address registry, uint256 token) external returns (uint256 loan);
+    function close(uint256 loan) external;
+    function borrow(uint256 loan, uint256 amount) external;
+    function withdraw(uint256 loan, uint256 amount, address usr) external;
+    function repay(uint256 loan, uint256 amount) external;
+    function nftlookup(bytes32 nftID) external returns (uint256 loan);
+    function shelf(uint256 loan)
+        external
+        returns (address registry, uint256 tokenId, uint256 price, uint256 principal, uint256 initial);
+}
