@@ -2,17 +2,30 @@ pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
 import { Proxy, ProxyRegistry } from "tinlake-proxy/proxy.sol";
+import { Actions } from "./actions.sol";
 
 import "./actions.sol";
 
 
 contract ActionsTest  {
+    address public actions;
+    Proxy public borrowerProxy;
+    address public borrowerProxy_;
+    ProxyRegistry public registry;
+
+    // BT Pool on Mainnet for testing
+    address public rootContract = 0x4597f91cC06687Bdb74147C80C097A79358Ed29b;
+
     function setUp() public {
         actions = address(new Actions());
         registry = new ProxyRegistry();
 
         borrowerProxy = Proxy(registry.build());
         borrowerProxy_ = address(borrowerProxy);
+    }
+
+    function testBasic() public {
+
     }
 
 //     // ----- Borrower -----
@@ -117,6 +130,5 @@ contract ActionsTest  {
 //        // assert: nft transfered back to borrower
 //        assertEq(collateralNFT.ownerOf(tokenId), address(borrower_));
 //        assertEq(shelf.nftlookup(lookupId), 0);
-//    }
-   
+//    } 
 }
