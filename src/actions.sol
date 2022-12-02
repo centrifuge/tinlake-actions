@@ -14,79 +14,80 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity >=0.5.15 <0.6.0;
+pragma solidity ^0.8.0;
 
 interface NFTLike {
-    function approve(address usr, uint token) external;
-    function transferFrom(address src, address dst, uint token) external;
+    function approve(address usr, uint256 token) external;
+    function transferFrom(address src, address dst, uint256 token) external;
 }
 
 interface ERC20Like {
-    function approve(address usr, uint amount) external;
-    function transfer(address dst, uint amount) external;
-    function transferFrom(address src, address dst, uint amount) external;
+    function approve(address usr, uint256 amount) external;
+    function transfer(address dst, uint256 amount) external;
+    function transferFrom(address src, address dst, uint256 amount) external;
 }
 
 interface ShelfLike {
-    function pile() external returns(address);
-    function lock(uint loan) external;
-    function unlock(uint loan) external;
-    function issue(address registry, uint token) external returns(uint loan);
-    function close(uint loan) external;
-    function borrow(uint loan, uint amount) external;
-    function withdraw(uint loan, uint amount, address usr) external;
-    function repay(uint loan, uint amount) external;
-    function shelf(uint loan) external returns(address registry,uint256 tokenId,uint price,uint principal, uint initial);
+    function pile() external returns (address);
+    function lock(uint256 loan) external;
+    function unlock(uint256 loan) external;
+    function issue(address registry, uint256 token) external returns (uint256 loan);
+    function close(uint256 loan) external;
+    function borrow(uint256 loan, uint256 amount) external;
+    function withdraw(uint256 loan, uint256 amount, address usr) external;
+    function repay(uint256 loan, uint256 amount) external;
+    function shelf(uint256 loan)
+        external
+        returns (address registry, uint256 tokenId, uint256 price, uint256 principal, uint256 initial);
 }
 
 interface PileLike {
-    function debt(uint loan) external returns(uint);
+    function debt(uint256 loan) external returns (uint256);
 }
 
 contract Actions {
-
     // --- Events ---
-    event Issue(address indexed shelf, address indexed registry, uint indexed token);
-    event Transfer(address indexed registry, uint indexed token);
-    event Lock(address indexed shelf, uint indexed loan);
-    event BorrowWithdraw(address indexed shelf, uint indexed loan, uint amount, address indexed usr);
-    event Repay(address indexed shelf, address indexed erc20, uint indexed loan, uint amount);
-    event Unlock(address indexed shelf, address indexed registry, uint token, uint indexed loan);
-    event Close(address indexed shelf, uint indexed loan);
-    event ApproveNFT(address indexed registry, address indexed usr, uint tokenAmount);
-    event ApproveERC20(address indexed erc20, address indexed usr, uint amount);
-    event TransferERC20(address indexed erc20, address indexed dst, uint amount);
+    event Issue(address indexed shelf, address indexed registry, uint256 indexed token);
+    event Transfer(address indexed registry, uint256 indexed token);
+    event Lock(address indexed shelf, uint256 indexed loan);
+    event BorrowWithdraw(address indexed shelf, uint256 indexed loan, uint256 amount, address indexed usr);
+    event Repay(address indexed shelf, address indexed erc20, uint256 indexed loan, uint256 amount);
+    event Unlock(address indexed shelf, address indexed registry, uint256 token, uint256 indexed loan);
+    event Close(address indexed shelf, uint256 indexed loan);
+    event ApproveNFT(address indexed registry, address indexed usr, uint256 tokenAmount);
+    event ApproveERC20(address indexed erc20, address indexed usr, uint256 amount);
+    event TransferERC20(address indexed erc20, address indexed dst, uint256 amount);
 
     // --- Borrower Actions ---
-    function issue(address shelf, address registry, uint token) public returns (uint loan) {
+    function issue(address shelf, address registry, uint256 token) public returns (uint256 loan) {
         loan = ShelfLike(shelf).issue(registry, token);
         // proxy approve shelf to take nft
         NFTLike(registry).approve(shelf, token);
-        
+
         emit Issue(shelf, registry, token);
         return loan;
     }
 
-    function transfer(address registry, uint token) public {
+    function transfer(address registry, uint256 token) public {
         // transfer nft from borrower to proxy
         NFTLike(registry).transferFrom(msg.sender, address(this), token);
         emit Transfer(registry, token);
     }
 
-    function lock(address shelf, uint loan) public {
+    function lock(address shelf, uint256 loan) public {
         ShelfLike(shelf).lock(loan);
         emit Lock(shelf, loan);
     }
 
-    function borrowWithdraw(address shelf, uint loan, uint amount, address usr) public {
+    function borrowWithdraw(address shelf, uint256 loan, uint256 amount, address usr) public {
         ShelfLike(shelf).borrow(loan, amount);
         ShelfLike(shelf).withdraw(loan, amount, usr);
         emit BorrowWithdraw(shelf, loan, amount, usr);
     }
 
-    function repay(address shelf, address erc20, uint loan, uint amount) public {
+    function repay(address shelf, address erc20, uint256 loan, uint256 amount) public {
         // don't allow repaying more than the debt as currency would get stuck in the proxy
-        uint debt = PileLike(ShelfLike(shelf).pile()).debt(loan);
+        uint256 debt = PileLike(ShelfLike(shelf).pile()).debt(loan);
         if (amount > debt) {
             amount = debt;
         }
@@ -94,11 +95,11 @@ contract Actions {
         _repay(shelf, erc20, loan, amount);
     }
 
-    function repayFullDebt(address shelf, address pile, address erc20, uint loan) public {
+    function repayFullDebt(address shelf, address pile, address erc20, uint256 loan) public {
         _repay(shelf, erc20, loan, PileLike(pile).debt(loan));
     }
 
-    function _repay(address shelf, address erc20, uint loan, uint amount) internal {
+    function _repay(address shelf, address erc20, uint256 loan, uint256 amount) internal {
         // transfer money from borrower to proxy
         ERC20Like(erc20).transferFrom(msg.sender, address(this), amount);
         ERC20Like(erc20).approve(address(shelf), amount);
@@ -106,53 +107,60 @@ contract Actions {
         emit Repay(shelf, erc20, loan, amount);
     }
 
-    function unlock(address shelf, address registry, uint token, uint loan) public {
+    function unlock(address shelf, address registry, uint256 token, uint256 loan) public {
         ShelfLike(shelf).unlock(loan);
         NFTLike(registry).transferFrom(address(this), msg.sender, token);
         emit Unlock(shelf, registry, token, loan);
     }
 
-    function close(address shelf, uint loan) public {
+    function close(address shelf, uint256 loan) public {
         ShelfLike(shelf).close(loan);
         emit Close(shelf, loan);
     }
 
     // --- Borrower Wrappers ---
-    function transferIssue(address shelf, address registry, uint token) public returns (uint loan) {
+    function transferIssue(address shelf, address registry, uint256 token) public returns (uint256 loan) {
         transfer(registry, token);
         return issue(shelf, registry, token);
     }
 
-    function lockBorrowWithdraw(address shelf, uint loan, uint amount, address usr) public {
+    function lockBorrowWithdraw(address shelf, uint256 loan, uint256 amount, address usr) public {
         lock(shelf, loan);
         borrowWithdraw(shelf, loan, amount, usr);
     }
 
-    function transferIssueLockBorrowWithdraw(address shelf, address registry, uint token, uint amount, address usr) public {
-        uint loan = transferIssue(shelf, registry, token);
+    function transferIssueLockBorrowWithdraw(
+        address shelf,
+        address registry,
+        uint256 token,
+        uint256 amount,
+        address usr
+    ) public {
+        uint256 loan = transferIssue(shelf, registry, token);
         lockBorrowWithdraw(shelf, loan, amount, usr);
     }
 
-    function repayUnlockClose(address shelf, address pile, address registry, uint token, address erc20, uint loan) public {
+    function repayUnlockClose(address shelf, address pile, address registry, uint256 token, address erc20, uint256 loan)
+        public
+    {
         repayFullDebt(shelf, pile, erc20, loan);
         unlock(shelf, registry, token, loan);
         close(shelf, loan);
     }
 
     // --- Misc Functions ---
-    function approveNFT(address registry, address usr, uint tokenAmount) public {
+    function approveNFT(address registry, address usr, uint256 tokenAmount) public {
         NFTLike(registry).approve(usr, tokenAmount);
         emit ApproveNFT(registry, usr, tokenAmount);
     }
 
-    function approveERC20(address erc20, address usr, uint amount) public {
+    function approveERC20(address erc20, address usr, uint256 amount) public {
         ERC20Like(erc20).approve(usr, amount);
         emit ApproveERC20(erc20, usr, amount);
     }
 
-    function transferERC20(address erc20, address dst, uint amount) public {
+    function transferERC20(address erc20, address dst, uint256 amount) public {
         ERC20Like(erc20).transfer(dst, amount);
         emit TransferERC20(erc20, dst, amount);
     }
-
 }
