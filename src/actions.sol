@@ -111,6 +111,7 @@ contract Actions {
     }
 
     function borrowWithdraw(uint256 loan, uint256 amount) public onlyDelegateCall {
+
         ShelfLike(shelf).borrow(loan, amount);
         ShelfLike(shelf).withdraw(loan, amount, withdrawAddress);
         emit BorrowWithdraw(shelf, loan, amount, withdrawAddress);
@@ -144,7 +145,7 @@ contract Actions {
         emit Unlock(shelf, registry, token, loan);
     }
 
-    function close(uint256 loan) public {
+    function close(uint256 loan) public onlyDelegateCall{
         ShelfLike(shelf).close(loan);
         emit Close(shelf, loan);
     }
