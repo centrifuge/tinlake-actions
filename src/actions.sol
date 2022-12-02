@@ -52,6 +52,11 @@ interface RootLike {
 
 interface BorrowerDeployerLike {
     function shelf() external view returns (address);
+    function feed() external view returns (address);
+}
+
+interface FeedLike {
+    function update(bytes32 lookupId, uint256 value, uint256 riskGroup) external;
 }
 
 contract Actions {
@@ -70,6 +75,7 @@ contract Actions {
 
     address public immutable shelf;
     address public immutable pile;
+    address public immutable feed;
     address public immutable self;
 
     // address to deposit withdraws
@@ -84,19 +90,19 @@ contract Actions {
     constructor(address root_, address withdrawAddress_) {
         shelf = BorrowerDeployerLike(RootLike(root_).borrowerDeployer()).shelf();
         pile = ShelfLike(shelf).pile();
+        feed = BorrowerDeployerLike(RootLike(root_).borrowerDeployer()).feed();
         self = address(this);
         require(withdrawAddress_ != address(0), "withdraw-address-not-set");
         require(shelf != address(0), "shelf-not-set");
         require(pile != address(0), "pile-not-set");
+        require(feed != address(0), "feed-not-set");
         withdrawAddress = withdrawAddress_;
     }
 
-
     function mintAsset(address registry) public onlyDelegateCall returns (uint256 tokenId) {
-       tokenId = NFTLike(registry).mintTo(address(this));
-       emit Minted(registry, tokenId);
-
-    }   
+        tokenId = NFTLike(registry).mintTo(address(this));
+        emit Minted(registry, tokenId);
+    }
 
     // --- Borrower Actions ---
     function issue(address registry, uint256 token) public onlyDelegateCall returns (uint256 loan) {
@@ -120,7 +126,6 @@ contract Actions {
     }
 
     function borrowWithdraw(uint256 loan, uint256 amount) public onlyDelegateCall {
-
         ShelfLike(shelf).borrow(loan, amount);
         ShelfLike(shelf).withdraw(loan, amount, withdrawAddress);
         emit BorrowWithdraw(shelf, loan, amount, withdrawAddress);
@@ -154,7 +159,7 @@ contract Actions {
         emit Unlock(shelf, registry, token, loan);
     }
 
-    function close(uint256 loan) public onlyDelegateCall{
+    function close(uint256 loan) public onlyDelegateCall {
         ShelfLike(shelf).close(loan);
         emit Close(shelf, loan);
     }
@@ -168,6 +173,19 @@ contract Actions {
     function lockBorrowWithdraw(uint256 loan, uint256 amount) public onlyDelegateCall {
         lock(loan);
         borrowWithdraw(loan, amount);
+    }
+
+    function mintIssuePriceLock(address registry, uint256 price, uint256 riskGroup)
+        public
+        onlyDelegateCall
+        returns (uint256 loan, uint256 tokenId)
+    {
+        tokenId = mintAsset(registry);
+        loan = issue(registry, tokenId);
+        NFTLike(registry).approve(shelf, tokenId);
+        lock(loan);
+        bytes32 lookupId = keccak256(abi.encodePacked(address(registry), tokenId));
+        FeedLike(feed).update(lookupId, price, riskGroup);
     }
 
     function transferIssueLockBorrowWithdraw(address registry, uint256 token, uint256 amount) public onlyDelegateCall {
