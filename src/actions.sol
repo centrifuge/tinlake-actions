@@ -193,7 +193,7 @@ contract Actions {
         lockBorrowWithdraw(loan, amount);
     }
 
-    function repayUnlockClose(address registry, uint256 token, address erc20, uint256 loan) public {
+    function repayUnlockClose(address registry, uint256 token, address erc20, uint256 loan) public onlyDelegateCall {
         repayFullDebt(erc20, loan);
         unlock(registry, token, loan);
         close(loan);
