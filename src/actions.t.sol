@@ -2,20 +2,11 @@ pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
 import {Proxy, ProxyRegistry} from "tinlake-proxy/proxy.sol";
-import {ERC721} from "openzeppelin-contracts/token/ERC721/ERC721.sol";
+import {AssetNFT} from "tinlake-asset-nft/assetNFT.sol";
 import {Actions} from "./actions.sol";
 import {BasisPoolTest, OperatorLike, MemberlistLike} from "./basic-pool-test.sol";
 
-contract Collateral is ERC721("Collateral", "COL") {
-    uint256 public nextTokenId;
 
-    function mint(address usr) public returns (uint256) {
-        uint256 id = nextTokenId;
-        _mint(usr, nextTokenId);
-        nextTokenId++;
-        return id;
-    }
-}
 
 contract ActionsTest is BasisPoolTest {
     Actions public bActions;
@@ -24,7 +15,7 @@ contract ActionsTest is BasisPoolTest {
     Proxy public randomUserProxy;
     address public borrowerProxy_;
     ProxyRegistry public registry;
-    Collateral public collateralNFT;
+    AssetNFT public collateralNFT;
 
     address randomUserProxy_ = address(0x123);
     address internal borrower_;
@@ -42,7 +33,7 @@ contract ActionsTest is BasisPoolTest {
         // get pool addresses from root contract
         _setUpPoolInterfaces();
         _fileRiskGroup();
-        collateralNFT = new Collateral();
+        collateralNFT = new AssetNFT();
 
         // test contract is borrower
         borrower_ = address(this);
@@ -64,7 +55,7 @@ contract ActionsTest is BasisPoolTest {
     }
 
     function _issueNFT(address usr) public returns (uint256 tokenId, bytes32 nftID) {
-        tokenId = collateralNFT.mint(usr);
+        tokenId = collateralNFT.mintTo(usr);
         nftID = keccak256(abi.encodePacked(address(collateralNFT), tokenId));
     }
 
