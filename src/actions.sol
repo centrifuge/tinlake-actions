@@ -19,6 +19,7 @@ pragma solidity ^0.8.0;
 interface NFTLike {
     function approve(address usr, uint256 token) external;
     function transferFrom(address src, address dst, uint256 token) external;
+    function mintTo(address usr) external returns (uint256);
 }
 
 interface ERC20Like {
@@ -65,6 +66,7 @@ contract Actions {
     event ApproveNFT(address indexed registry, address indexed usr, uint256 tokenAmount);
     event ApproveERC20(address indexed erc20, address indexed usr, uint256 amount);
     event TransferERC20(address indexed erc20, address indexed dst, uint256 amount);
+    event Minted(address indexed registry, uint256 tokenId);
 
     address public immutable shelf;
     address public immutable pile;
@@ -88,6 +90,13 @@ contract Actions {
         require(pile != address(0), "pile-not-set");
         withdrawAddress = withdrawAddress_;
     }
+
+
+    function mintAsset(address registry) public onlyDelegateCall returns (uint256 tokenId) {
+       tokenId = NFTLike(registry).mintTo(address(this));
+       emit Minted(registry, tokenId);
+
+    }   
 
     // --- Borrower Actions ---
     function issue(address registry, uint256 token) public onlyDelegateCall returns (uint256 loan) {
