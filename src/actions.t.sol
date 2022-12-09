@@ -1,4 +1,4 @@
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.1;
 pragma experimental ABIEncoderV2;
 
 import {Proxy, ProxyRegistry} from "tinlake-proxy/proxy.sol";

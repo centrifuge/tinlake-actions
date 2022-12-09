@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.1;
 
 interface NFTLike {
     function approve(address usr, uint256 token) external;
@@ -88,15 +88,19 @@ contract Actions {
     }
 
     constructor(address root_, address withdrawAddress_) {
-        shelf = BorrowerDeployerLike(RootLike(root_).borrowerDeployer()).shelf();
-        pile = ShelfLike(shelf).pile();
-        feed = BorrowerDeployerLike(RootLike(root_).borrowerDeployer()).feed();
-        self = address(this);
+        address shelf_ = BorrowerDeployerLike(RootLike(root_).borrowerDeployer()).shelf();
+        address pile_ = ShelfLike(shelf_).pile();
+        address feed_ = BorrowerDeployerLike(RootLike(root_).borrowerDeployer()).feed();
+        address self_ = address(this);
         require(withdrawAddress_ != address(0), "withdraw-address-not-set");
-        require(shelf != address(0), "shelf-not-set");
-        require(pile != address(0), "pile-not-set");
-        require(feed != address(0), "feed-not-set");
+        require(shelf_ != address(0), "shelf-not-set");
+        require(pile_ != address(0), "pile-not-set");
+        require(feed_ != address(0), "feed-not-set");
         withdrawAddress = withdrawAddress_;
+        shelf = shelf_;
+        self = self_;
+        pile = pile_;
+        feed = feed_;
     }
 
     function mintAsset(address registry) public onlyDelegateCall returns (uint256 tokenId) {
