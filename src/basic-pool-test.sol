@@ -1,7 +1,6 @@
 pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
-
 import {
     RootLike,
     BorrowerDeployerLike,
@@ -20,7 +19,6 @@ import {
 import {Test} from "forge-std/Test.sol";
 
 contract BasisPoolTest is Test {
-
     uint256 public constant ONE = 10 ** 27;
 
     // Pool Interfaces
