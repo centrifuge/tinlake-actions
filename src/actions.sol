@@ -103,9 +103,9 @@ contract Actions {
         feed = feed_;
     }
 
-    function mintAsset(address registry) public onlyDelegateCall returns (uint256 tokenId) {
-        tokenId = NFTLike(registry).mintTo(address(this));
-        emit Minted(registry, tokenId);
+    function mintAsset(address minter) public onlyDelegateCall returns (uint256 tokenId) {
+        tokenId = NFTLike(minter).mintTo(address(this));
+        emit Minted(minter, tokenId);
     }
 
     // --- Borrower Actions ---
@@ -179,12 +179,12 @@ contract Actions {
         borrowWithdraw(loan, amount);
     }
 
-    function mintIssuePriceLock(address registry, uint256 price, uint256 riskGroup)
+    function mintIssuePriceLock(address minter, address registry, uint256 price, uint256 riskGroup)
         public
         onlyDelegateCall
         returns (uint256 loan, uint256 tokenId)
     {
-        tokenId = mintAsset(registry);
+        tokenId = mintAsset(minter);
         loan = issue(registry, tokenId);
         NFTLike(registry).approve(shelf, tokenId);
         lock(loan);
