@@ -13,7 +13,8 @@ import {
     CoordinatorLike,
     DependLike,
     ShelfLike,
-    PileLike
+    PileLike,
+    AuthLike
 } from "./interfaces/pool-interfaces.sol";
 
 import {Test} from "forge-std/Test.sol";

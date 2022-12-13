@@ -62,6 +62,10 @@ interface DependLike {
     function depend(bytes32 name, address addr) external;
 }
 
+interface AuthLike {
+    function rely(address addr) external;
+}
+
 interface ShelfLike {
     function pile() external returns (address);
     function lock(uint256 loan) external;

@@ -14,11 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.1;
 
 interface NFTLike {
     function approve(address usr, uint256 token) external;
     function transferFrom(address src, address dst, uint256 token) external;
+    function mintTo(address usr) external returns (uint256);
 }
 
 interface ERC20Like {
@@ -51,6 +52,11 @@ interface RootLike {
 
 interface BorrowerDeployerLike {
     function shelf() external view returns (address);
+    function feed() external view returns (address);
+}
+
+interface FeedLike {
+    function update(bytes32 lookupId, uint256 value, uint256 riskGroup) external;
 }
 
 contract Actions {
@@ -65,9 +71,11 @@ contract Actions {
     event ApproveNFT(address indexed registry, address indexed usr, uint256 tokenAmount);
     event ApproveERC20(address indexed erc20, address indexed usr, uint256 amount);
     event TransferERC20(address indexed erc20, address indexed dst, uint256 amount);
+    event Minted(address indexed registry, uint256 tokenId);
 
     address public immutable shelf;
     address public immutable pile;
+    address public immutable feed;
     address public immutable self;
 
     // address to deposit withdraws
@@ -80,13 +88,24 @@ contract Actions {
     }
 
     constructor(address root_, address withdrawAddress_) {
-        shelf = BorrowerDeployerLike(RootLike(root_).borrowerDeployer()).shelf();
-        pile = ShelfLike(shelf).pile();
-        self = address(this);
+        address shelf_ = BorrowerDeployerLike(RootLike(root_).borrowerDeployer()).shelf();
+        address pile_ = ShelfLike(shelf_).pile();
+        address feed_ = BorrowerDeployerLike(RootLike(root_).borrowerDeployer()).feed();
+        address self_ = address(this);
         require(withdrawAddress_ != address(0), "withdraw-address-not-set");
-        require(shelf != address(0), "shelf-not-set");
-        require(pile != address(0), "pile-not-set");
+        require(shelf_ != address(0), "shelf-not-set");
+        require(pile_ != address(0), "pile-not-set");
+        require(feed_ != address(0), "feed-not-set");
         withdrawAddress = withdrawAddress_;
+        shelf = shelf_;
+        self = self_;
+        pile = pile_;
+        feed = feed_;
+    }
+
+    function mintAsset(address registry) public onlyDelegateCall returns (uint256 tokenId) {
+        tokenId = NFTLike(registry).mintTo(address(this));
+        emit Minted(registry, tokenId);
     }
 
     // --- Borrower Actions ---
@@ -111,7 +130,6 @@ contract Actions {
     }
 
     function borrowWithdraw(uint256 loan, uint256 amount) public onlyDelegateCall {
-
         ShelfLike(shelf).borrow(loan, amount);
         ShelfLike(shelf).withdraw(loan, amount, withdrawAddress);
         emit BorrowWithdraw(shelf, loan, amount, withdrawAddress);
@@ -145,7 +163,7 @@ contract Actions {
         emit Unlock(shelf, registry, token, loan);
     }
 
-    function close(uint256 loan) public onlyDelegateCall{
+    function close(uint256 loan) public onlyDelegateCall {
         ShelfLike(shelf).close(loan);
         emit Close(shelf, loan);
     }
@@ -161,12 +179,25 @@ contract Actions {
         borrowWithdraw(loan, amount);
     }
 
+    function mintIssuePriceLock(address registry, uint256 price, uint256 riskGroup)
+        public
+        onlyDelegateCall
+        returns (uint256 loan, uint256 tokenId)
+    {
+        tokenId = mintAsset(registry);
+        loan = issue(registry, tokenId);
+        NFTLike(registry).approve(shelf, tokenId);
+        lock(loan);
+        bytes32 lookupId = keccak256(abi.encodePacked(address(registry), tokenId));
+        FeedLike(feed).update(lookupId, price, riskGroup);
+    }
+
     function transferIssueLockBorrowWithdraw(address registry, uint256 token, uint256 amount) public onlyDelegateCall {
         uint256 loan = transferIssue(registry, token);
         lockBorrowWithdraw(loan, amount);
     }
 
-    function repayUnlockClose(address registry, uint256 token, address erc20, uint256 loan) public {
+    function repayUnlockClose(address registry, uint256 token, address erc20, uint256 loan) public onlyDelegateCall {
         repayFullDebt(erc20, loan);
         unlock(registry, token, loan);
         close(loan);
