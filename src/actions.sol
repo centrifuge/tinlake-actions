@@ -202,20 +202,4 @@ contract Actions {
         unlock(registry, token, loan);
         close(loan);
     }
-
-    // --- Misc Functions ---
-    function approveNFT(address registry, address usr, uint256 tokenAmount) public onlyDelegateCall {
-        NFTLike(registry).approve(usr, tokenAmount);
-        emit ApproveNFT(registry, usr, tokenAmount);
-    }
-
-    function approveERC20(address erc20, address usr, uint256 amount) public onlyDelegateCall {
-        ERC20Like(erc20).approve(usr, amount);
-        emit ApproveERC20(erc20, usr, amount);
-    }
-
-    function transferERC20(address erc20, address dst, uint256 amount) public onlyDelegateCall {
-        ERC20Like(erc20).transfer(dst, amount);
-        emit TransferERC20(erc20, dst, amount);
-    }
 }
