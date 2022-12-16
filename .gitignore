@@ -2,3 +2,6 @@ out
 .idea
 bin/test/addresses.json
 deployments
+
+/cache
+/out

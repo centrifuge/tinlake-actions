@@ -3,6 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import {Proxy, ProxyRegistry} from "tinlake-proxy/proxy.sol";
 import {AssetNFT} from "tinlake-asset-nft/assetNFT.sol";
+import {AssetMinter} from "tinlake-asset-nft/assetMinter.sol";
 import {Actions} from "./actions.sol";
 import {BasisPoolTest, OperatorLike, MemberlistLike, AuthLike} from "./basic-pool-test.sol";
 
@@ -13,6 +14,7 @@ contract ActionsTest is BasisPoolTest {
     Proxy public randomUserProxy;
     address public borrowerProxy_;
     ProxyRegistry public registry;
+    AssetMinter public minter;
     AssetNFT public collateralNFT;
 
     address randomUserProxy_ = address(0x123);
@@ -32,6 +34,7 @@ contract ActionsTest is BasisPoolTest {
         // get pool addresses from root contract
         _setUpPoolInterfaces();
         _fileRiskGroup();
+        minter = new AssetMinter();
         collateralNFT = new AssetNFT();
 
         // test contract is borrower
@@ -144,7 +147,9 @@ contract ActionsTest is BasisPoolTest {
 
     function testMintIssuePriceLock() public returns (uint256 loan, uint256 tokenId) {
         // proxy allowed to mint
-        collateralNFT.rely(borrowerProxy_);
+        minter.rely(borrowerProxy_);
+        minter.depend("assetNFT",address(collateralNFT));
+        collateralNFT.rely(address(minter));
 
         // proxy allowed to update feed
         vm.startPrank(address(rootContract));
@@ -157,7 +162,7 @@ contract ActionsTest is BasisPoolTest {
         bytes memory response = borrowerProxy.userExecute(
             address(bActions),
             abi.encodeWithSignature(
-                "mintIssuePriceLock(address,uint256,uint256)", address(collateralNFT), price, riskGroup
+                "mintIssuePriceLock(address,address,uint256,uint256)", address(minter),address(collateralNFT), price, riskGroup
             )
         );
         (loan, tokenId) = abi.decode(response, (uint256, uint256));

@@ -103,9 +103,9 @@ contract Actions {
         feed = feed_;
     }
 
-    function mintAsset(address registry) public onlyDelegateCall returns (uint256 tokenId) {
-        tokenId = NFTLike(registry).mintTo(address(this));
-        emit Minted(registry, tokenId);
+    function mintAsset(address minter) public onlyDelegateCall returns (uint256 tokenId) {
+        tokenId = NFTLike(minter).mintTo(address(this));
+        emit Minted(minter, tokenId);
     }
 
     // --- Borrower Actions ---
@@ -179,12 +179,12 @@ contract Actions {
         borrowWithdraw(loan, amount);
     }
 
-    function mintIssuePriceLock(address registry, uint256 price, uint256 riskGroup)
+    function mintIssuePriceLock(address minter, address registry, uint256 price, uint256 riskGroup)
         public
         onlyDelegateCall
         returns (uint256 loan, uint256 tokenId)
     {
-        tokenId = mintAsset(registry);
+        tokenId = mintAsset(minter);
         loan = issue(registry, tokenId);
         NFTLike(registry).approve(shelf, tokenId);
         lock(loan);
@@ -201,21 +201,5 @@ contract Actions {
         repayFullDebt(erc20, loan);
         unlock(registry, token, loan);
         close(loan);
-    }
-
-    // --- Misc Functions ---
-    function approveNFT(address registry, address usr, uint256 tokenAmount) public onlyDelegateCall {
-        NFTLike(registry).approve(usr, tokenAmount);
-        emit ApproveNFT(registry, usr, tokenAmount);
-    }
-
-    function approveERC20(address erc20, address usr, uint256 amount) public onlyDelegateCall {
-        ERC20Like(erc20).approve(usr, amount);
-        emit ApproveERC20(erc20, usr, amount);
-    }
-
-    function transferERC20(address erc20, address dst, uint256 amount) public onlyDelegateCall {
-        ERC20Like(erc20).transfer(dst, amount);
-        emit TransferERC20(erc20, dst, amount);
     }
 }
