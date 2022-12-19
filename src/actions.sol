@@ -118,6 +118,16 @@ contract Actions {
         return loan;
     }
 
+    function issue(address shelf_, address registry, uint256 token) public onlyDelegateCall returns (uint256 loan) {
+        require(shelf == shelf_, "invalid-shelf");
+        loan = ShelfLike(shelf).issue(registry, token);
+        // proxy approve shelf to take nft
+        NFTLike(registry).approve(shelf, token);
+
+        emit Issue(shelf, registry, token);
+        return loan;
+    }
+
     function transfer(address registry, uint256 token) public onlyDelegateCall {
         // transfer nft from borrower to proxy
         NFTLike(registry).transferFrom(msg.sender, address(this), token);
@@ -129,7 +139,21 @@ contract Actions {
         emit Lock(shelf, loan);
     }
 
+    function lock(address shelf_, uint256 loan) public onlyDelegateCall {
+        require(shelf == shelf_, "invalid-shelf");
+        ShelfLike(shelf).lock(loan);
+        emit Lock(shelf, loan);
+    }
+
     function borrowWithdraw(uint256 loan, uint256 amount) public onlyDelegateCall {
+        ShelfLike(shelf).borrow(loan, amount);
+        ShelfLike(shelf).withdraw(loan, amount, withdrawAddress);
+        emit BorrowWithdraw(shelf, loan, amount, withdrawAddress);
+    }
+
+    function borrowWithdraw(address shelf_, uint256 loan, uint256 amount, address usr) public onlyDelegateCall {
+        require(shelf == shelf_, "invalid-shelf");
+        require(usr == withdrawAddress, "invalid-user");
         ShelfLike(shelf).borrow(loan, amount);
         ShelfLike(shelf).withdraw(loan, amount, withdrawAddress);
         emit BorrowWithdraw(shelf, loan, amount, withdrawAddress);
@@ -145,7 +169,24 @@ contract Actions {
         _repay(erc20, loan, amount);
     }
 
+    function repay(address shelf_, address erc20, uint256 loan, uint256 amount) public onlyDelegateCall {
+        require(shelf == shelf_, "invalid-shelf");
+        // don't allow repaying more than the debt as currency would get stuck in the proxy
+        uint256 debt = PileLike(ShelfLike(shelf).pile()).debt(loan);
+        if (amount > debt) {
+            amount = debt;
+        }
+
+        _repay(erc20, loan, amount);
+    }
+
     function repayFullDebt(address erc20, uint256 loan) public onlyDelegateCall {
+        _repay(erc20, loan, PileLike(pile).debt(loan));
+    }
+
+    function repayFullDebt(address shelf_, address pile_, address erc20, uint256 loan) public onlyDelegateCall {
+        require(shelf == shelf_, "invalid-shelf");
+        require(pile == pile_, "invalid-pile");
         _repay(erc20, loan, PileLike(pile).debt(loan));
     }
 
@@ -163,7 +204,20 @@ contract Actions {
         emit Unlock(shelf, registry, token, loan);
     }
 
+    function unlock(address shelf_, address registry, uint256 token, uint256 loan) public onlyDelegateCall {
+        require(shelf == shelf_, "invalid-shelf");
+        ShelfLike(shelf).unlock(loan);
+        NFTLike(registry).transferFrom(address(this), msg.sender, token);
+        emit Unlock(shelf, registry, token, loan);
+    }
+
     function close(uint256 loan) public onlyDelegateCall {
+        ShelfLike(shelf).close(loan);
+        emit Close(shelf, loan);
+    }
+
+    function close(address shelf_, uint256 loan) public onlyDelegateCall {
+        require(shelf == shelf_, "invalid-shelf");
         ShelfLike(shelf).close(loan);
         emit Close(shelf, loan);
     }
@@ -174,7 +228,20 @@ contract Actions {
         return issue(registry, token);
     }
 
+    function transferIssue(address shelf_, address registry, uint256 token) public onlyDelegateCall returns (uint256 loan) {
+        require(shelf == shelf_, "invalid-shelf");
+        transfer(registry, token);
+        return issue(registry, token);
+    }
+
     function lockBorrowWithdraw(uint256 loan, uint256 amount) public onlyDelegateCall {
+        lock(loan);
+        borrowWithdraw(loan, amount);
+    }
+
+    function lockBorrowWithdraw(address shelf_, uint256 loan, uint256 amount, address usr) public onlyDelegateCall {
+        require(shelf == shelf_, "invalid-shelf");
+        require(usr == withdrawAddress, "invalid-user");
         lock(loan);
         borrowWithdraw(loan, amount);
     }
@@ -197,7 +264,21 @@ contract Actions {
         lockBorrowWithdraw(loan, amount);
     }
 
+    function transferIssueLockBorrowWithdraw(address shelf_, address registry, uint256 token, uint256 amount) public onlyDelegateCall {
+        require(shelf == shelf_, "invalid-shelf");
+        uint256 loan = transferIssue(registry, token);
+        lockBorrowWithdraw(loan, amount);
+    }
+
     function repayUnlockClose(address registry, uint256 token, address erc20, uint256 loan) public onlyDelegateCall {
+        repayFullDebt(erc20, loan);
+        unlock(registry, token, loan);
+        close(loan);
+    }
+
+    function repayUnlockClose(address shelf_, address pile_, address registry, uint256 token, address erc20, uint256 loan) public onlyDelegateCall {
+        require(shelf == shelf_, "invalid-shelf");
+        require(pile == pile_, "invalid-pile");
         repayFullDebt(erc20, loan);
         unlock(registry, token, loan);
         close(loan);

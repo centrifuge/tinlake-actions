@@ -203,7 +203,7 @@ contract ActionsTest is BasisPoolTest {
         assertEq(currency.balanceOf(borrower_), amount + secondAmount);
     }
 
-    function testFailIssueLockBorrowerWithdrawCeilingNotSet() public {
+    function testFailIssueLockBorrowerWithdrawCeilingNotSetLegacy() public {
         (uint256 tokenId,) = _issueNFT(borrower_);
         uint256 amount = 100 ether;
         borrowerProxy.userExecute(
@@ -288,4 +288,112 @@ contract ActionsTest is BasisPoolTest {
         assertEq(collateralNFT.ownerOf(tokenId), address(borrower_));
         assertEq(shelf.nftlookup(lookupId), 0);
     }
+
+    // ----- Legacy Borrower -----
+    function issueLegacy(uint tokenId) public returns(uint) {
+         assertEq(collateralNFT.ownerOf(tokenId), borrower_);
+        // approve nft transfer to proxy 
+        collateralNFT.approve(borrowerProxy_, tokenId);
+        bytes memory data = abi.encodeWithSignature("transferIssue(address,address,uint256)", address(shelf), address(collateralNFT), tokenId);
+        bytes memory response = borrowerProxy.userExecute(address(bActions), data);
+        (uint loan) = abi.decode(response, (uint));
+        // assert: nft transferred to borrowerProxy
+        assertEq(collateralNFT.ownerOf(tokenId), borrowerProxy_);
+        // assert: loan created and owner is borrowerProxy
+        assertEq(title.ownerOf(loan), borrowerProxy_);
+        return loan;
+    }
+
+   function testIssueLockBorrowLegacy() public {
+       // Borrower: Issue Loan
+       (uint tokenId, ) = _issueNFT(borrower_);
+       uint loan = issue(tokenId);
+       uint price = 50;
+       uint amount = 25;
+       uint riskGroup = 0;
+
+       // Lender: lend
+       defaultInvest(100 ether);
+       vm.warp(block.timestamp + 1 days);
+       coordinator.closeEpoch();
+
+       // Admin: set loan parameters
+       priceNFTandSetRisk(tokenId, price, riskGroup);
+
+       // Borrower: Lock & Borrow
+       borrowerProxy.userExecute(address(bActions), abi.encodeWithSignature("lockBorrowWithdraw(address,uint256,uint256,address)", address(shelf), loan, amount, borrower_));
+       assertEq(collateralNFT.ownerOf(1), address(shelf));
+       // check if borrower received loan amount
+       assertEq(currency.balanceOf(borrower_), amount);
+   }
+
+    function testFailIssueLockBorrowerWithdrawCeilingNotSet() public {
+        (uint tokenId, ) = _issueNFT(borrower_);
+        uint amount = 100 ether;
+        borrowerProxy.userExecute(address(bActions), abi.encodeWithSignature("issueLockBorrowWithdraw(address,address,uint256,uint256,address)", address(shelf), address(collateralNFT), tokenId, amount, borrower_));
+    }
+
+    function testFailIssueBorrowerNotOwnerLegacy() public {
+        (uint tokenId,) = _issueNFT(randomUserProxy_);
+        bytes memory data = abi.encodeWithSignature("issue(address,address,uint256)", address(shelf), address(collateralNFT), tokenId);
+        // randomProxy not owner of nft
+        borrowerProxy.userExecute(address(bActions), data);
+    }
+
+    function testFailBorrowNotLoanOwnerLegacy() public {
+        (uint tokenId, ) = _issueNFT(borrower_);
+        bytes memory data = abi.encodeWithSignature("issue(address,address,uint256)", address(shelf), address(collateralNFT), tokenId);
+        bytes memory response = borrowerProxy.userExecute(address(bActions), data);
+        (uint loan) = abi.decode(response, (uint));
+        borrowerProxy.userExecute(address(bActions), abi.encodeWithSignature("lock(address,uint256)", address(shelf), loan));
+
+        // Lend:
+        uint amount = 100 ether;
+        defaultInvest(amount);
+        vm.warp(block.timestamp + 1 days);
+        coordinator.closeEpoch();
+
+        // Admin: set loan parameters
+        uint price = 50;
+        uint riskGroup = 2;
+        // Admin: set loan parameters
+        priceNFTandSetRisk(tokenId, price, riskGroup);
+
+        // RandomUserProxy: Borrow & Withdraw
+        randomUserProxy.userExecute(address(bActions), abi.encodeWithSignature("borrowWithdraw(address,uint256,uint256,address)", address(shelf), loan, amount, randomUserProxy_));
+    }
+
+   function testRepayUnlockCloseLegacy() public {
+       // Borrower: Issue Loan
+       (uint tokenId, bytes32 lookupId) = _issueNFT(borrower_);
+       uint loan = issue(tokenId);
+
+
+       // Lender: lend
+       defaultInvest(100 ether);
+       vm.warp(block.timestamp + 1 days);
+       coordinator.closeEpoch();
+
+       // Admin: set loan parameters
+       uint price = 50;
+       uint riskGroup = 0;
+       uint amount = 25;
+       priceNFTandSetRisk(tokenId, price, riskGroup);
+
+       // Borrower: Lock & Borrow
+       borrowerProxy.userExecute(address(bActions), abi.encodeWithSignature("lockBorrowWithdraw(address,uint256,uint256,address)", address(shelf), loan, amount, borrower_));
+
+       // accrue interest
+       vm.warp(block.timestamp + 365 days);
+
+       // mint currency for borrower to cover interest
+       currency.mint(borrower_, 15 ether);
+       // allow proxy to take money for repayment
+       currency.approve(borrowerProxy_, 115 ether);
+       // Borrower: Repay & Unlock & Close
+       borrowerProxy.userExecute(address(bActions), abi.encodeWithSignature("repayUnlockClose(address,address,address,uint256,address,uint256)", address(shelf), address(pile), address(collateralNFT), tokenId, address(currency), loan));
+       // assert: nft transfered back to borrower
+       assertEq(collateralNFT.ownerOf(tokenId), address(borrower_));
+       assertEq(shelf.nftlookup(lookupId), 0);
+   }
 }
