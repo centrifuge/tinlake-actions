@@ -203,7 +203,7 @@ contract ActionsTest is BasisPoolTest {
         assertEq(currency.balanceOf(borrower_), amount + secondAmount);
     }
 
-    function testFailIssueLockBorrowerWithdrawCeilingNotSetLegacy() public {
+    function testFailIssueLockBorrowerWithdrawCeilingNotSet() public {
         (uint256 tokenId,) = _issueNFT(borrower_);
         uint256 amount = 100 ether;
         borrowerProxy.userExecute(
@@ -327,7 +327,7 @@ contract ActionsTest is BasisPoolTest {
        assertEq(currency.balanceOf(borrower_), amount);
    }
 
-    function testFailIssueLockBorrowerWithdrawCeilingNotSet() public {
+    function testFailIssueLockBorrowerWithdrawCeilingNotSetLegacy() public {
         (uint tokenId, ) = _issueNFT(borrower_);
         uint amount = 100 ether;
         borrowerProxy.userExecute(address(bActions), abi.encodeWithSignature("issueLockBorrowWithdraw(address,address,uint256,uint256,address)", address(shelf), address(collateralNFT), tokenId, amount, borrower_));
