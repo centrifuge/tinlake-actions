@@ -22,10 +22,8 @@ contract ActionsTest is BasisPoolTest {
     address internal withdrawAddress_;
 
     function _createProxyAndActions(address root, address proxyUser) internal returns (Proxy proxy, Actions actions) {
-        proxy = Proxy(registry.build());
-        proxy.addUser(proxyUser);
         actions = new Actions(root, proxyUser);
-        proxy.file("target", address(actions));
+        proxy = Proxy(registry.build(proxyUser, address(actions)));
     }
 
     function setUp() public {
