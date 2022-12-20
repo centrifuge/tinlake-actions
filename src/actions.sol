@@ -113,9 +113,9 @@ contract Actions {
         require(shelf == shelf_, "invalid-shelf");
         loan = ShelfLike(shelf_).issue(registry, token);
         // proxy approve shelf to take nft
-        NFTLike(registry).approve(shelf, token);
+        NFTLike(registry).approve(shelf_, token);
 
-        emit Issue(shelf, registry, token);
+        emit Issue(shelf_, registry, token);
         return loan;
     }
 
@@ -127,8 +127,8 @@ contract Actions {
 
     function lock(address shelf_, uint256 loan) public onlyDelegateCall {
         require(shelf == shelf_, "invalid-shelf");
-        ShelfLike(shelf).lock(loan);
-        emit Lock(shelf, loan);
+        ShelfLike(shelf_).lock(loan);
+        emit Lock(shelf_, loan);
     }
 
     function borrowWithdraw(address shelf_, uint256 loan, uint256 amount, address usr) public onlyDelegateCall {
@@ -136,7 +136,7 @@ contract Actions {
         require(usr == withdrawAddress, "invalid-user");
         ShelfLike(shelf_).borrow(loan, amount);
         ShelfLike(shelf_).withdraw(loan, amount, withdrawAddress);
-        emit BorrowWithdraw(shelf, loan, amount, withdrawAddress);
+        emit BorrowWithdraw(shelf_, loan, amount, withdrawAddress);
     }
 
     function repay(address shelf_, address erc20, uint256 loan, uint256 amount) public onlyDelegateCall {
@@ -153,7 +153,7 @@ contract Actions {
     function repayFullDebt(address shelf_, address pile_, address erc20, uint256 loan) public onlyDelegateCall {
         require(shelf == shelf_, "invalid-shelf");
         require(pile == pile_, "invalid-pile");
-        _repay(erc20, loan, PileLike(pile).debt(loan));
+        _repay(erc20, loan, PileLike(pile_).debt(loan));
     }
 
     function _repay(address erc20, uint256 loan, uint256 amount) internal {
