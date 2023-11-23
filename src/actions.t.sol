@@ -5,9 +5,9 @@ import {Proxy, ProxyRegistry} from "tinlake-proxy/proxy.sol";
 import {AssetNFT} from "tinlake-asset-nft/assetNFT.sol";
 import {AssetMinter} from "tinlake-asset-nft/assetMinter.sol";
 import {Actions} from "./actions.sol";
-import {BasisPoolTest, OperatorLike, MemberlistLike, AuthLike} from "./basic-pool-test.sol";
+import {BasicPoolTest, OperatorLike, MemberlistLike, AuthLike} from "./basic-pool-test.sol";
 
-contract ActionsTest is BasisPoolTest {
+contract ActionsTest is BasicPoolTest {
     Actions public bActions;
     Actions public randomUserActions;
     Proxy public borrowerProxy;
@@ -22,7 +22,7 @@ contract ActionsTest is BasisPoolTest {
     address internal withdrawAddress_;
 
     function _createProxyAndActions(address root, address proxyUser) internal returns (Proxy proxy, Actions actions) {
-        proxy = Proxy(registry.build());
+        proxy = Proxy(registry.build(proxyUser, root));
         proxy.addUser(proxyUser);
         actions = new Actions(root, proxyUser);
         proxy.file("target", address(actions));
