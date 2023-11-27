@@ -75,7 +75,7 @@ contract BasicPoolTest is Test {
         vm.startPrank(address(rootContract));
         feed.file(
             "riskGroup",
-            1001, // riskGroup:       0
+            10000, // riskGroup:       10000 (an unrealistic risk group in order to avoid collisions with e)
             8 * 10 ** 26, // thresholdRatio   70%
             6 * 10 ** 26, // ceilingRatio     60%
             uint256(1000000564701133626865910626) // interestRate     5% per year
