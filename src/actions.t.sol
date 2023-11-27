@@ -115,7 +115,7 @@ contract ActionsTest is BasicPoolTest {
         uint256 loan = issue(tokenId);
         uint256 price = 100;
         uint256 amount = 25;
-        uint256 riskGroup = 0;
+        uint256 riskGroup = 10000;
 
         // Lender: lend
         _invest(100 ether);
@@ -160,7 +160,7 @@ contract ActionsTest is BasicPoolTest {
         vm.stopPrank();
 
         uint256 price = 100 ether;
-        uint256 riskGroup = 0;
+        uint256 riskGroup = 10000;
 
         bytes memory response = borrowerProxy.userExecute(
             address(bActions),
@@ -259,7 +259,7 @@ contract ActionsTest is BasicPoolTest {
 
         // Admin: set loan parameters
         uint256 price = 50;
-        uint256 riskGroup = 0;
+        uint256 riskGroup = 10000;
 
         // price collateral and add to riskgroupaddress
         priceNFTandSetRisk(tokenId, price, riskGroup);
@@ -285,7 +285,7 @@ contract ActionsTest is BasicPoolTest {
 
         // Admin: set loan parameters
         uint256 price = 50;
-        uint256 riskGroup = 0;
+        uint256 riskGroup = 10000;
         uint256 amount = 25;
         priceNFTandSetRisk(tokenId, price, riskGroup);
 
