@@ -5,9 +5,9 @@ import {Proxy, ProxyRegistry} from "tinlake-proxy/proxy.sol";
 import {AssetNFT} from "tinlake-asset-nft/assetNFT.sol";
 import {AssetMinter} from "tinlake-asset-nft/assetMinter.sol";
 import {Actions} from "./actions.sol";
-import {BasisPoolTest, OperatorLike, MemberlistLike, AuthLike} from "./basic-pool-test.sol";
+import {BasicPoolTest, OperatorLike, MemberlistLike, AuthLike} from "./basic-pool-test.sol";
 
-contract ActionsTest is BasisPoolTest {
+contract ActionsTest is BasicPoolTest {
     Actions public bActions;
     Actions public randomUserActions;
     Proxy public borrowerProxy;
@@ -22,10 +22,8 @@ contract ActionsTest is BasisPoolTest {
     address internal withdrawAddress_;
 
     function _createProxyAndActions(address root, address proxyUser) internal returns (Proxy proxy, Actions actions) {
-        proxy = Proxy(registry.build());
-        proxy.addUser(proxyUser);
         actions = new Actions(root, proxyUser);
-        proxy.file("target", address(actions));
+        proxy = Proxy(registry.build(proxyUser, address(actions)));
     }
 
     function setUp() public {
@@ -117,7 +115,7 @@ contract ActionsTest is BasisPoolTest {
         uint256 loan = issue(tokenId);
         uint256 price = 100;
         uint256 amount = 25;
-        uint256 riskGroup = 0;
+        uint256 riskGroup = 10000;
 
         // Lender: lend
         _invest(100 ether);
@@ -162,7 +160,7 @@ contract ActionsTest is BasisPoolTest {
         vm.stopPrank();
 
         uint256 price = 100 ether;
-        uint256 riskGroup = 0;
+        uint256 riskGroup = 10000;
 
         bytes memory response = borrowerProxy.userExecute(
             address(bActions),
@@ -261,7 +259,7 @@ contract ActionsTest is BasisPoolTest {
 
         // Admin: set loan parameters
         uint256 price = 50;
-        uint256 riskGroup = 0;
+        uint256 riskGroup = 10000;
 
         // price collateral and add to riskgroupaddress
         priceNFTandSetRisk(tokenId, price, riskGroup);
@@ -287,7 +285,7 @@ contract ActionsTest is BasisPoolTest {
 
         // Admin: set loan parameters
         uint256 price = 50;
-        uint256 riskGroup = 0;
+        uint256 riskGroup = 10000;
         uint256 amount = 25;
         priceNFTandSetRisk(tokenId, price, riskGroup);
 
