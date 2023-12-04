@@ -76,11 +76,12 @@ contract NS2Test is Test {
         bytes memory response = proxy.userExecute(
             address(actions),
             abi.encodeWithSignature(
-                "mintIssuePriceLock(address,address,uint256,uint256)",
+                "mintIssuePriceLock(address,address,uint256,uint256, uint256)",
                 address(minter),
                 address(assetNFT),
                 price,
-                riskGroup
+                riskGroup,
+                1733358595
             )
         );
         (loan, tokenId) = abi.decode(response, (uint256, uint256));
@@ -134,7 +135,7 @@ contract NS2Test is Test {
         // assertEq(ShelfLike(NS2Shelf).nftlookup(lookupId), 0);
     }
 
-    function testMint() public {
+    function testMintWithMaturityDate() public {
         Actions actions = new Actions(NS2Root, NS2Borrower);
         address actions_ = address(actions);
         address proxy_ = proxyRegistry.build(NS2Borrower, actions_);
@@ -154,11 +155,12 @@ contract NS2Test is Test {
         bytes memory response = proxy.userExecute(
             address(actions),
             abi.encodeWithSignature(
-                "mintIssuePriceLock(address,address,uint256,uint256)",
+                "mintIssuePriceLock(address,address,uint256,uint256,uint256)",
                 address(minter),
                 address(assetNFT),
                 price,
-                riskGroup
+                riskGroup,
+                1733358595
             )
         );
         (loan, tokenId) = abi.decode(response, (uint256, uint256));
@@ -166,7 +168,37 @@ contract NS2Test is Test {
         assertEq(NFTLike(NS2Title).ownerOf(loan), proxy_);
     }
 
-    function testRepay() public {
+    function testSwappingActionsContractAndMint() public {
+        Actions actions = new Actions(NS2Root, NS2Borrower);
+        address actions_ = address(actions);
+        address proxy_ = address(0x098498bDDF654cB416537c07889bF46E9f96a54b);
+        Proxy proxy = Proxy(proxy_);
 
+        vm.startPrank(centrifugeMultisig);
+        proxy.file("target", actions_);
+        minter.rely(proxy_);
+        RootLike(NS2Root).relyContract(NS2Feed, proxy_);
+        vm.stopPrank();
+
+        uint256 price = 100 ether;
+        uint256 riskGroup = 0;
+        uint256 loan;
+        uint256 tokenId;
+
+        vm.prank(NS2Borrower);
+        bytes memory response = proxy.userExecute(
+            address(actions),
+            abi.encodeWithSignature(
+                "mintIssuePriceLock(address,address,uint256,uint256,uint256)",
+                address(minter),
+                address(assetNFT),
+                price,
+                riskGroup,
+                1733358595
+            )
+        );
+        (loan, tokenId) = abi.decode(response, (uint256, uint256));
+        assertEq(assetNFT.ownerOf(tokenId), address(NS2Shelf));
+        assertEq(NFTLike(NS2Title).ownerOf(loan), proxy_);
     }
 }

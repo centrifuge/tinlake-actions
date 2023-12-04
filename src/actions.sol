@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.21;
 
 interface NFTLike {
     function approve(address usr, uint256 token) external;
@@ -57,6 +57,7 @@ interface BorrowerDeployerLike {
 
 interface FeedLike {
     function update(bytes32 lookupId, uint256 value, uint256 riskGroup) external;
+    function file(bytes32 name, bytes32 lookupId, uint256 value) external;
 }
 
 contract Actions {
@@ -206,6 +207,22 @@ contract Actions {
         lock(shelf, loan);
         bytes32 lookupId = keccak256(abi.encodePacked(address(registry), tokenId));
         FeedLike(feed).update(lookupId, price, riskGroup);
+    }
+
+    function mintIssuePriceLock(
+        address minter,
+        address registry,
+        uint256 price,
+        uint256 riskGroup,
+        uint256 maturityDate
+    ) public onlyDelegateCall returns (uint256 loan, uint256 tokenId) {
+        tokenId = mintAsset(minter);
+        loan = issue(shelf, registry, tokenId);
+        NFTLike(registry).approve(shelf, tokenId);
+        lock(shelf, loan);
+        bytes32 lookupId = keccak256(abi.encodePacked(address(registry), tokenId));
+        FeedLike(feed).update(lookupId, price, riskGroup);
+        FeedLike(feed).file("maturityDate", lookupId, maturityDate);
     }
 
     function transferIssueLockBorrowWithdraw(

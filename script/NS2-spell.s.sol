@@ -14,7 +14,7 @@ contract NS2Spell is Script {
     ProxyRegistry proxyRegistry;
     AssetNFT assetNFT;
     AssetMinter minter;
-    
+
     function setUp() public {
         NS2Root = address(0x53b2d22d07E069a3b132BfeaaD275b10273d381E);
         NS2Borrower = address(0x7Cae9bD865610750a48575aF15CAFe1e460c96a8);
