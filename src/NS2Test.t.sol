@@ -27,6 +27,11 @@ interface ShelfLike {
     function nftlookup(bytes32 lookupId) external view returns (uint256);
 }
 
+interface FeedLike {
+    function maturityDate(bytes32 nftId) external view returns (uint256);
+    function nftID(uint256 loan) external view returns (bytes32);
+}
+
 contract NS2Test is Test {
     address centrifugeMultisig;
     address NS2Root;
@@ -76,7 +81,7 @@ contract NS2Test is Test {
         bytes memory response = proxy.userExecute(
             address(actions),
             abi.encodeWithSignature(
-                "mintIssuePriceLock(address,address,uint256,uint256, uint256)",
+                "mintIssuePriceLock(address,address,uint256,uint256,uint256)",
                 address(minter),
                 address(assetNFT),
                 price,
@@ -146,8 +151,8 @@ contract NS2Test is Test {
         RootLike(NS2Root).relyContract(NS2Feed, proxy_);
         vm.stopPrank();
 
-        uint256 price = 100 ether;
-        uint256 riskGroup = 0;
+        uint256 price = 10 ether;
+        uint256 riskGroup = 1;
         uint256 loan;
         uint256 tokenId;
 
@@ -160,12 +165,14 @@ contract NS2Test is Test {
                 address(assetNFT),
                 price,
                 riskGroup,
-                1733358595
+                1704585600
             )
         );
         (loan, tokenId) = abi.decode(response, (uint256, uint256));
         assertEq(assetNFT.ownerOf(tokenId), address(NS2Shelf));
         assertEq(NFTLike(NS2Title).ownerOf(loan), proxy_);
+        bytes32 nftId = FeedLike(NS2Feed).nftID(loan);
+        assertEq(FeedLike(NS2Feed).maturityDate(nftId), 1704585600);
     }
 
     function testSwappingActionsContractAndMint() public {
