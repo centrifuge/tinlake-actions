@@ -46,7 +46,7 @@ contract NS2Test is Test {
     Proxy proxy;
 
     function setUp() public {
-        // Old Proxy: 0x46fe0b84442f0ea2248d7704fae8fafc5f28aff3
+        // NS2 contracts
         centrifugeMultisig = address(0xf3BceA7494D8f3ac21585CA4b0E52aa175c24C25);
         NS2Root = address(0x53b2d22d07E069a3b132BfeaaD275b10273d381E);
         NS2Borrower = address(0x7Cae9bD865610750a48575aF15CAFe1e460c96a8);
@@ -59,7 +59,7 @@ contract NS2Test is Test {
         minter = AssetMinter(address(0x8D25184fe134057c9d59e898bEb81AcD6519FEB3));
     }
 
-    function testDeploy() public {
+    function testMintBorrowRepay() public {
         Actions actions = new Actions(NS2Root, NS2Borrower);
         address actions_ = address(actions);
         address proxy_ = proxyRegistry.build(NS2Borrower, actions_);
@@ -69,8 +69,6 @@ contract NS2Test is Test {
         minter.rely(proxy_);
         RootLike(NS2Root).relyContract(NS2Feed, proxy_);
         vm.stopPrank();
-
-        // ---------- Mint new NFT ----------
 
         uint256 price = 100 ether;
         uint256 riskGroup = 0;
@@ -93,23 +91,9 @@ contract NS2Test is Test {
         assertEq(assetNFT.ownerOf(tokenId), address(NS2Shelf));
         assertEq(NFTLike(NS2Title).ownerOf(loan), proxy_);
 
-        // // ---------- Borrow against NFT ----------
-
         address DAI = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
         deal(DAI, NS2Borrower, 1_000_000_000 ether);
         assertEq(ERC20Like(DAI).balanceOf(NS2Borrower), 1_000_000_000 ether);
-
-        // uint256 amount = 25 ether;
-        // vm.prank(NS2Borrower);
-        // proxy.userExecute(
-        //     address(actions),
-        //     abi.encodeWithSignature(
-        //         "borrowWithdraw(address,uint256,uint256,address)", address(NS2Shelf), loan, amount, NS2Borrower
-        //     )
-        // );
-        // assertEq(ERC20Like(DAI).balanceOf(NS2Borrower), amount);
-
-        // ----------- Repay old NFT -----------
 
         vm.prank(NS2Borrower);
         ERC20Like(DAI).approve(proxy_, 100000000000 ether);
@@ -135,9 +119,6 @@ contract NS2Test is Test {
                 loan
             )
         );
-        // assert: nft transfered back to borrower
-        // assertEq(assetNFT.ownerOf(tokenId), address(NS2Borrower));
-        // assertEq(ShelfLike(NS2Shelf).nftlookup(lookupId), 0);
     }
 
     function testMintWithMaturityDate() public {
