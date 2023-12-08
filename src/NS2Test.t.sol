@@ -46,17 +46,18 @@ contract NS2Test is Test {
     Proxy proxy;
 
     function setUp() public {
-        // NS2 contracts
+        // shared contracts
         centrifugeMultisig = address(0xf3BceA7494D8f3ac21585CA4b0E52aa175c24C25);
+        proxyRegistry = ProxyRegistry(address(0x4dbcF4322833B36e2E49a2d4dDcc7310074FdfEC));
+        assetNFT = AssetNFT(address(0xA1829901090ff9364881EE75d008e5EA7e0e031A));
+        minter = AssetMinter(address(0x8D25184fe134057c9d59e898bEb81AcD6519FEB3));
+        // NS2 contracts
         NS2Root = address(0x53b2d22d07E069a3b132BfeaaD275b10273d381E);
         NS2Borrower = address(0x7Cae9bD865610750a48575aF15CAFe1e460c96a8);
         NS2Shelf = address(0x7d057A056939bb96D682336683C10EC89b78D7CE);
         NS2Title = address(0x07cdD617c53B07208b0371C93a02deB8d8D49C6e);
         NS2Feed = address(0x41fAD1Eb242De19dA0206B0468763333BB6C2B3D);
         NS2Pile = address(0x3eC5c16E7f2C6A80E31997C68D8Fa6ACe089807f);
-        proxyRegistry = ProxyRegistry(address(0x4dbcF4322833B36e2E49a2d4dDcc7310074FdfEC));
-        assetNFT = AssetNFT(address(0xA1829901090ff9364881EE75d008e5EA7e0e031A));
-        minter = AssetMinter(address(0x8D25184fe134057c9d59e898bEb81AcD6519FEB3));
     }
 
     function testMintBorrowRepay() public {
